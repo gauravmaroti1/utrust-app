@@ -1,0 +1,16 @@
+{
+  "name": "utrust-vehicle-management",
+  "version": "1.0.0",
+  "description": "Utrust Used Vehicle Management System — Prakash Toyota",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["utrust", "vehicle", "management", "prakash-toyota"],
+  "author": "Prakash Toyota",
+  "license": "UNLICENSED"
+}

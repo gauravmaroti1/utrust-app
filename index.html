@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Utrust — Vehicle Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase Firestore only (Spark free plan) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDazZSs72-ObVlMWcfCryKh7hwTtUmQ_LA",
+  authDomain: "utrust-app.firebaseapp.com",
+  projectId: "utrust-app",
+  storageBucket: "utrust-app.firebasestorage.app",
+  messagingSenderId: "779202883931",
+  appId: "1:779202883931:web:5855c6e3023e4c3249aa7e"
+});
+const db = getFirestore(app);
+
+function compressImage(dataUrl, maxW, quality) {
+  maxW = maxW || 800; quality = quality || 0.55;
+  return new Promise(function(resolve) {
+    if (!dataUrl || !dataUrl.startsWith('data:')) { resolve(dataUrl); return; }
+    var img = new Image();
+    img.onload = function() {
+      var scale = Math.min(1, maxW / img.width);
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = function() { resolve(dataUrl); };
+    img.src = dataUrl;
+  });
+}
+
+async function compressAllPhotos(photos) {
+  var out = {};
+  var entries = Object.entries(photos || {});
+  for (var idx = 0; idx < entries.length; idx++) {
+    var key = entries[idx][0]; var val = entries[idx][1];
+    // Compress harder: max 640px, 40% quality to stay well under 1MB Firestore limit
+    out[key] = val ? await compressImage(val, 640, 0.40) : null;
+  }
+  return out;
+}
+
+async function fbSaveVehicle(vehicle) {
+  var photos = vehicle.photos; var rest = Object.assign({}, vehicle);
+  delete rest.photos;
+  delete rest.id; // let Firestore assign the real ID
+  // Strip null docs to keep doc small
+  if (rest.docs) {
+    var cleanDocs = {};
+    Object.keys(rest.docs).forEach(function(k){ if(rest.docs[k]) cleanDocs[k]=rest.docs[k]; });
+    rest.docs = cleanDocs;
+  }
+  var compPhotos = await compressAllPhotos(photos || {});
+  // Strip null photos
+  var finalPhotos = {};
+  Object.keys(compPhotos).forEach(function(k){ if(compPhotos[k]) finalPhotos[k]=compPhotos[k]; });
+  var docRef = await addDoc(collection(db, 'vehicles'), Object.assign({}, rest, { photos: finalPhotos, createdAt: serverTimestamp() }));
+  await updateDoc(docRef, { id: docRef.id });
+  return docRef.id;
+}
+
+async function fbUpdateVehicle(id, updates) {
+  var photos = updates.photos; var rest = Object.assign({}, updates);
+  delete rest.photos;
+  var payload = rest;
+  if (photos) { payload.photos = await compressAllPhotos(photos); }
+  await updateDoc(doc(db, 'vehicles', id), payload);
+}
+
+async function fbDeleteVehicle(id) { await deleteDoc(doc(db, 'vehicles', id)); }
+
+function fbListenVehicles(callback) {
+  var q = query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, function(snap) {
+    callback(snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); }));
+  }, function(err) { console.error('Firestore:', err); });
+}
+
+async function fbSeedIfEmpty(samples) {
+  var snap = await getDocs(collection(db, 'vehicles'));
+  if (snap.empty) {
+    for (var i = 0; i < samples.length; i++) {
+      var v = Object.assign({}, samples[i]);
+      v.photos = {}; v.createdAt = serverTimestamp();
+      await addDoc(collection(db, 'vehicles'), v);
+    }
+  }
+}
+
+window.FB = { fbSaveVehicle: fbSaveVehicle, fbUpdateVehicle: fbUpdateVehicle, fbDeleteVehicle: fbDeleteVehicle, fbListenVehicles: fbListenVehicles, fbSeedIfEmpty: fbSeedIfEmpty };
+window.FB_READY = true;
+window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<style>
+:root{--bg:#0a0b0d;--sur:#111318;--sur2:#181c23;--sur3:#1e2330;--bdr:#252b38;--bdr2:#2e3545;--acc:#f5a623;--acc2:#e8912a;--adim:rgba(245,166,35,0.12);--grn:#22c55e;--gdim:rgba(34,197,94,0.12);--red:#ef4444;--rdim:rgba(239,68,68,0.12);--blu:#3b82f6;--bdim:rgba(59,130,246,0.12);--pur:#a855f7;--txt:#e8eaf0;--tx2:#9aa3b8;--tx3:#5a6480;--r:8px;--r2:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Instrument Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+#root{display:flex;min-height:100vh;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--sur);}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
+
+/* SIDEBAR — desktop */
+.sb{width:230px;min-height:100vh;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40;}
+.sb-logo{padding:16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;}
+.sb-icon{width:34px;height:34px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sb-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;}
+.sb-user{padding:12px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
+.av.admin{background:rgba(168,85,247,0.2);color:var(--pur);border:1px solid rgba(168,85,247,0.3);}
+.av.leader{background:var(--bdim);color:var(--blu);border:1px solid rgba(59,130,246,0.3);}
+.av.officer{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.3);}
+.sb-uname{font-size:12px;font-weight:600;line-height:1.2;}
+.sb-urole{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;}
+.sb-ubranch{font-size:10px;color:var(--acc);font-family:'DM Mono',monospace;}
+.nav-area{flex:1;padding:8px 0;}
+.sb-sec{padding:10px 14px 4px;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:0.1em;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.nav-it{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:all 0.15s;font-size:13px;color:var(--tx2);font-weight:500;position:relative;margin:1px 8px;border-radius:var(--r);}
+.nav-it:hover{background:var(--sur2);color:var(--txt);}
+.nav-it.active{background:var(--adim);color:var(--acc);}
+.nav-it.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--acc);border-radius:0 2px 2px 0;}
+.nav-ic{width:18px;text-align:center;font-size:14px;flex-shrink:0;}
+.nav-bd{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:'DM Mono',monospace;}
+.sb-foot{margin-top:auto;padding:14px;border-top:1px solid var(--bdr);}
+.logout-btn{width:100%;padding:8px;background:transparent;border:1px solid var(--bdr);border-radius:var(--r);color:var(--tx3);font-family:'Instrument Sans',sans-serif;font-size:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-height:100vh;overflow:hidden;}
+.topbar{padding:12px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--sur);position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:8px;}
+.tb-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;}
+.tb-sub{font-size:11px;color:var(--tx3);}
+.content{flex:1;padding:20px;overflow-y:auto;}
+
+/* BUTTONS */
+.btn{padding:7px 13px;border-radius:var(--r);border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-acc{background:var(--acc);color:#000;}
+.btn-acc:hover{background:var(--acc2);}
+.btn-ghost{background:var(--sur2);color:var(--tx2);border:1px solid var(--bdr);}
+.btn-ghost:hover{color:var(--txt);border-color:var(--bdr2);}
+.btn-danger{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+.btn-danger:hover{background:rgba(239,68,68,0.2);}
+.btn-success{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.25);}
+.btn-success:hover{background:rgba(34,197,94,0.2);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+/* FORM FIELDS */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--tx3);margin-bottom:5px;letter-spacing:0.07em;text-transform:uppercase;}
+.field input,.field select,.field textarea{width:100%;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 13px;color:var(--txt);font-family:'Instrument Sans',sans-serif;font-size:14px;transition:border-color 0.15s;outline:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acc);}
+.field select option{background:var(--sur2);}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg.fc{grid-template-columns:1fr;}
+.s2{grid-column:span 2;}
+
+/* CARDS & TABLES */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);overflow:hidden;}
+.card-hdr{padding:13px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;}
+.card-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+table{width:100%;border-collapse:collapse;}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:0.07em;text-transform:uppercase;font-family:'DM Mono',monospace;border-bottom:1px solid var(--bdr);background:var(--sur2);}
+td{padding:11px 14px;border-bottom:1px solid var(--bdr);font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'DM Mono',monospace;}
+.b-pend{background:rgba(245,166,35,0.15);color:var(--acc);border:1px solid rgba(245,166,35,0.25);}
+.b-appr{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.25);}
+.b-rejt{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+.b-drft{background:var(--sur3);color:var(--tx3);border:1px solid var(--bdr2);}
+.b-revw{background:var(--bdim);color:var(--blu);border:1px solid rgba(59,130,246,0.25);}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.sc{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;position:relative;overflow:hidden;}
+.sc-lbl{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:7px;}
+.sc-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:3px;}
+.sc-sub{font-size:11px;color:var(--grn);}
+.sc-ico{position:absolute;top:14px;right:14px;font-size:20px;opacity:0.25;}
+
+/* FORM STEPS */
+.steps{display:flex;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);overflow-x:auto;margin-bottom:20px;}
+.step{flex:0 0 auto;padding:10px 8px;text-align:center;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:0.04em;text-transform:uppercase;font-family:'DM Mono',monospace;border-right:1px solid var(--bdr);cursor:pointer;transition:all 0.15s;min-width:68px;}
+.step:last-child{border-right:none;}
+.step.active{background:var(--adim);color:var(--acc);}
+.step.done{background:var(--gdim);color:var(--grn);}
+.step-n{display:block;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:1px;}
+.fcard{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:20px;margin-bottom:14px;}
+.fcard-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px;}
+.fcard-sub{font-size:12px;color:var(--tx3);margin-bottom:18px;}
+
+/* CAMERA */
+.cam-slot{background:var(--sur2);border:2px dashed var(--bdr2);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:all 0.2s;}
+.cam-slot:hover{border-color:var(--acc);}
+.cam-slot.captured{border-style:solid;border-color:var(--grn);}
+.cam-preview{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;}
+.cam-preview img{width:100%;height:100%;object-fit:cover;}
+.cam-lbl{font-size:10px;text-align:center;padding:6px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:0.03em;background:var(--sur2);}
+.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cam-modal{position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.cam-modal-inner{width:100%;max-width:480px;border-radius:12px;overflow:hidden;background:#000;}
+.shutter{width:64px;height:64px;border-radius:50%;background:var(--acc);border:4px solid rgba(255,255,255,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all 0.15s;}
+.shutter:hover{transform:scale(1.05);}
+
+/* UPLOAD */
+.upzone{border:2px dashed var(--bdr2);border-radius:var(--r2);padding:22px 14px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--sur2);}
+.upzone:hover{border-color:var(--acc);background:rgba(245,166,35,0.04);}
+.upzone.done{border-style:solid;border-color:var(--grn);background:var(--gdim);}
+
+/* CHECKLIST */
+.ck-item{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--sur2);border-radius:var(--r);border:1px solid var(--bdr);margin-bottom:8px;flex-wrap:wrap;gap:8px;}
+.ck-lbl{font-size:13px;font-weight:500;}
+.ck-btns{display:flex;gap:5px;flex-wrap:wrap;}
+.ck-btn{padding:4px 9px;border-radius:4px;border:1px solid var(--bdr);background:transparent;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Mono',monospace;transition:all 0.12s;color:var(--tx3);}
+.ck-btn.good{border-color:var(--grn);color:var(--grn);background:var(--gdim);}
+.ck-btn.warn{border-color:var(--acc);color:var(--acc);background:var(--adim);}
+.ck-btn.bad{border-color:var(--red);color:var(--red);background:var(--rdim);}
+
+/* RATING */
+.rating{display:flex;gap:5px;flex-wrap:wrap;}
+.r-btn{width:34px;height:34px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);color:var(--tx3);font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:all 0.12s;display:flex;align-items:center;justify-content:center;}
+.r-btn:hover{border-color:var(--acc);color:var(--acc);}
+.r-btn.sel{background:var(--acc);border-color:var(--acc);color:#000;}
+
+/* ALGO BOX */
+.algo-box{background:var(--sur3);border:1px solid var(--bdr2);border-radius:var(--r2);padding:18px;margin-bottom:14px;}
+.algo-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px;}
+.algo-row:last-child{border-bottom:none;}
+.algo-key{color:var(--tx3);}
+.algo-val{font-family:'DM Mono',monospace;font-weight:600;}
+.algo-minus{color:var(--red);}
+.algo-result{color:var(--acc);font-size:15px;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px);}
+.modal{background:var(--sur);border:1px solid var(--bdr2);border-radius:16px;padding:24px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;box-shadow:0 40px 80px rgba(0,0,0,0.5);}
+.modal-ttl{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--tx3);margin-bottom:18px;}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+
+/* APPROVAL CARDS */
+.appr-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;margin-bottom:12px;}
+
+/* CHART */
+.bar-chart{display:flex;flex-direction:column;gap:10px;}
+.bar-row{display:flex;align-items:center;gap:10px;}
+.bar-lbl{width:90px;font-size:11px;color:var(--tx2);text-align:right;flex-shrink:0;}
+.bar-track{flex:1;height:8px;background:var(--sur2);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--acc);transition:width 0.4s;}
+.bar-val{width:36px;font-size:11px;color:var(--tx3);font-family:'DM Mono',monospace;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--sur2);padding:4px;border-radius:var(--r2);margin-bottom:18px;border:1px solid var(--bdr);overflow-x:auto;}
+.tab{flex:1;padding:7px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--tx3);cursor:pointer;border-radius:var(--r);transition:all 0.15s;white-space:nowrap;}
+.tab.active{background:var(--sur);color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+
+/* TOAST */
+.toast{position:fixed;bottom:16px;right:16px;left:16px;max-width:400px;margin:0 auto;background:var(--sur);border:1px solid var(--bdr2);border-radius:var(--r2);padding:12px 16px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 16px 40px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.toast.success{border-left:3px solid var(--grn);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--acc);}
+
+/* LOGIN */
+.login-screen{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden;padding:16px;}
+.login-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(245,166,35,0.08) 0%,transparent 70%);}
+.login-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(var(--bdr) 1px,transparent 1px),linear-gradient(90deg,var(--bdr) 1px,transparent 1px);background-size:40px 40px;opacity:0.2;}
+.login-card{background:var(--sur);border:1px solid var(--bdr2);border-radius:16px;padding:36px 28px;width:100%;max-width:420px;position:relative;box-shadow:0 40px 80px rgba(0,0,0,0.6);}
+.login-logo{display:flex;align-items:center;gap:13px;margin-bottom:24px;}
+.login-logo-icon{width:44px;height:44px;border-radius:11px;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.btn-primary{width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.btn-primary:hover{background:var(--acc2);}
+
+/* SEARCH */
+.search-bar{display:flex;align-items:center;gap:7px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;}
+.search-bar input{background:none;border:none;outline:none;color:var(--txt);font-family:'Instrument Sans',sans-serif;font-size:13px;min-width:0;flex:1;}
+
+/* DETAIL */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.detail-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;}
+.detail-card-ttl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:7px;}
+.drow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px;}
+.drow:last-child{border-bottom:none;}
+.dkey{color:var(--tx3);}
+.dval{font-weight:600;text-align:right;}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.photo-thumb{aspect-ratio:4/3;background:var(--sur2);border-radius:6px;border:1px solid var(--bdr);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;}
+.photo-thumb:hover{border-color:var(--acc);}
+.photo-lbl{font-size:9px;color:var(--tx3);text-align:center;margin-top:3px;font-family:'DM Mono',monospace;}
+
+/* USER CARD */
+.user-card{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);margin-bottom:10px;flex-wrap:wrap;}
+.btag{display:inline-block;font-size:9px;font-family:'DM Mono',monospace;color:var(--acc);background:var(--adim);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,166,35,0.2);}
+
+/* MIS */
+.mis-table{width:100%;border-collapse:collapse;}
+.mis-table th,.mis-table td{padding:9px 12px;border-bottom:1px solid var(--bdr);font-size:12px;}
+.mis-table th{background:var(--sur2);font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:0.07em;font-family:'DM Mono',monospace;}
+.mis-table tr:last-child td{border-bottom:none;}
+.mis-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* MOBILE */
+@media(max-width:768px){
+  #root{flex-direction:column;}
+  .sb{width:100%;min-height:auto;height:auto;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--bdr);position:sticky;top:0;overflow-x:auto;overflow-y:hidden;}
+  .sb-logo{padding:10px 12px;border-bottom:none;border-right:1px solid var(--bdr);flex-shrink:0;}
+  .sb-user{padding:8px 10px;border-bottom:none;border-right:1px solid var(--bdr);flex-shrink:0;}
+  .sb-uname{font-size:11px;} .sb-urole,.sb-ubranch{display:none;}
+  .sb-sec{display:none;}
+  .nav-area{display:flex;flex:1;overflow-x:auto;align-items:center;padding:0 4px;}
+  .nav-it{flex-direction:column;padding:6px 9px;margin:3px 2px;min-width:48px;gap:2px;flex-shrink:0;}
+  .nav-it span.nav-txt{font-size:9px;}
+  .nav-ic{font-size:15px;width:auto;}
+  .sb-foot{margin-top:0;padding:8px 10px;border-top:none;border-left:1px solid var(--bdr);margin-left:auto;flex-shrink:0;}
+  .main{min-height:0;}
+  .content{padding:12px;}
+  .sg{grid-template-columns:1fr 1fr;gap:10px;}
+  .sc{padding:12px;} .sc-val{font-size:20px;}
+  .fg{grid-template-columns:1fr !important;}
+  .s2{grid-column:span 1 !important;}
+  .fcard{padding:14px;}
+  .detail-grid{grid-template-columns:1fr;}
+  .photo-grid{grid-template-columns:repeat(3,1fr);}
+  .cam-grid{grid-template-columns:1fr 1fr;}
+  .card{overflow-x:auto;}
+  table{min-width:480px;}
+  .modal{padding:18px;}
+  .topbar{padding:10px 12px;}
+}
+@media(max-width:400px){
+  .sg{grid-template-columns:1fr;}
+  .nav-it span.nav-txt{display:none;}
+  .nav-it{min-width:40px;}
+}
+@media(min-width:769px) and (max-width:1100px){
+  .sb{width:56px;}
+  .sb-name,.sb-uname,.sb-urole,.sb-ubranch,.sb-sec,.nav-it span.nav-txt,.nav-bd{display:none;}
+  .nav-it{justify-content:center;padding:10px;}
+  .sb-user{justify-content:center;}
+  .sg{grid-template-columns:1fr 1fr;}
+  .detail-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useRef} = React;
+
+// ── CREDENTIALS ──────────────────────────────────────────
+const DEFAULT_CREDS = [
+  {id:'U001',username:'admin',password:'Admin@1234',name:'Utrust Admin',role:'admin',email:'admin@utrust.in',avatar:'UA',branch:'HQ',phone:''},
+  {id:'U002',username:'dilnawaz.purnea',password:'Utrust@2025',name:'Dilnawaz Ahmad',role:'leader',email:'dilnawaz@utrust.in',avatar:'DA',branch:'Purnea',phone:'6287796605'},
+  {id:'U003',username:'sajan.purnea',password:'Utrust@2025',name:'Sajan Kr Saha',role:'officer',email:'sajan@utrust.in',avatar:'SS',branch:'Purnea',phone:'9264476721'},
+  {id:'U004',username:'ravi.purnea',password:'Utrust@2025',name:'Ravi Yadav',role:'officer',email:'ravi.y@utrust.in',avatar:'RY',branch:'Purnea',phone:'9264476725'},
+  {id:'U005',username:'khushboo.purnea',password:'Utrust@2025',name:'Khushboo',role:'officer',email:'khushboo@utrust.in',avatar:'KH',branch:'Purnea',phone:'9264476720'},
+  {id:'U006',username:'ashwani.purnea',password:'Utrust@2025',name:'Ashwani Yadav',role:'officer',email:'ashwani@utrust.in',avatar:'AY',branch:'Purnea',phone:'9264476712'},
+  {id:'U007',username:'ravikumar.purnea',password:'Utrust@2025',name:'Ravi Kumar',role:'officer',email:'ravi.k@utrust.in',avatar:'RK',branch:'Purnea',phone:'6287796606'},
+  {id:'U008',username:'shadab.purnea',password:'Utrust@2025',name:'Shadab Azher',role:'officer',email:'shadab@utrust.in',avatar:'SA',branch:'Purnea',phone:'6287796616'},
+  {id:'U009',username:'ranjeet.purnea',password:'Utrust@2025',name:'Ranjeet Kumar',role:'officer',email:'ranjeet@utrust.in',avatar:'RK',branch:'Purnea',phone:'9264476722'},
+  {id:'U010',username:'shivam.purnea',password:'Utrust@2025',name:'Shivam Kumar',role:'officer',email:'shivam@utrust.in',avatar:'SK',branch:'Purnea',phone:'9264476726'},
+  {id:'U011',username:'pranav.purnea',password:'Utrust@2025',name:'Pranav Kumar',role:'officer',email:'pranav@utrust.in',avatar:'PK',branch:'Purnea',phone:'6287796618'},
+  {id:'U012',username:'ashish.purnea',password:'Utrust@2025',name:'Ashish Kumar',role:'officer',email:'ashish@utrust.in',avatar:'AK',branch:'Purnea',phone:'9264476724'},
+  {id:'U013',username:'faraz.purnea',password:'Utrust@2025',name:'Faraz Akhtar',role:'officer',email:'faraz@utrust.in',avatar:'FA',branch:'Purnea',phone:'6287796619'},
+  {id:'U014',username:'arman.purnea',password:'Utrust@2025',name:'Arman Alam',role:'officer',email:'arman@utrust.in',avatar:'AA',branch:'Purnea',phone:'7352543435'},
+  {id:'U015',username:'sharad.purnea',password:'Utrust@2025',name:'Sharad Kumar',role:'officer',email:'sharad@utrust.in',avatar:'SK',branch:'Purnea',phone:'9264473723'},
+  {id:'U016',username:'abhinav.purnea',password:'Utrust@2025',name:'Abhinav Jha',role:'officer',email:'abhinav@utrust.in',avatar:'AJ',branch:'Purnea',phone:'9472684107'},
+  {id:'U017',username:'raja.purnea',password:'Utrust@2025',name:'Raja Kumar',role:'officer',email:'raja@utrust.in',avatar:'RK',branch:'Purnea',phone:'9113423617'},
+  {id:'U018',username:'mujahid.purnea',password:'Utrust@2025',name:'Mujahid Alam',role:'officer',email:'mujahid@utrust.in',avatar:'MA',branch:'Purnea',phone:'7979040048'},
+  {id:'U019',username:'ayush.purnea',password:'Utrust@2025',name:'Ayush Raj',role:'officer',email:'ayush@utrust.in',avatar:'AR',branch:'Purnea',phone:'6287796607'},
+  {id:'U020',username:'piyush.purnea',password:'Utrust@2025',name:'Piyush Ranjan',role:'officer',email:'piyush@utrust.in',avatar:'PR',branch:'Purnea',phone:'9264476716'},
+  {id:'U021',username:'faiyaz.kishanganj',password:'Utrust@2025',name:'Faiyaz Alam',role:'officer',email:'faiyaz@utrust.in',avatar:'FA',branch:'Kishanganj',phone:'6287796620'},
+  {id:'U022',username:'dilkhush.kishanganj',password:'Utrust@2025',name:'Dilkhush Ansari',role:'officer',email:'dilkhush@utrust.in',avatar:'DA',branch:'Kishanganj',phone:'6287796622'},
+  {id:'U023',username:'mithun.kishanganj',password:'Utrust@2025',name:'Mithun Kr Saha',role:'officer',email:'mithun@utrust.in',avatar:'MS',branch:'Kishanganj',phone:'9031021468'},
+  {id:'U024',username:'avinash.kishanganj',password:'Utrust@2025',name:'Avinash Kumar',role:'officer',email:'avinash@utrust.in',avatar:'AK',branch:'Kishanganj',phone:'9563402114'},
+  {id:'U025',username:'mukesh.katihar',password:'Utrust@2025',name:'Mukesh Karmakar',role:'officer',email:'mukesh.k@utrust.in',avatar:'MK',branch:'Katihar',phone:'9264476737'},
+  {id:'U026',username:'prince.katihar',password:'Utrust@2025',name:'Prince Gourav',role:'officer',email:'prince@utrust.in',avatar:'PG',branch:'Katihar',phone:'8825341068'},
+  {id:'U027',username:'satyam.katihar',password:'Utrust@2025',name:'Satyam Singh',role:'officer',email:'satyam@utrust.in',avatar:'SS',branch:'Katihar',phone:'8789734424'},
+  {id:'U028',username:'sonu.bhagalpur',password:'Utrust@2025',name:'Sonu Ghosh',role:'officer',email:'sonu@utrust.in',avatar:'SG',branch:'Bhagalpur',phone:'9264476729'},
+  {id:'U029',username:'mukesh.sinha.bhagalpur',password:'Utrust@2025',name:'Mukesh Kumar Sinha',role:'officer',email:'mukesh.s@utrust.in',avatar:'MS',branch:'Bhagalpur',phone:'9031021478'},
+  {id:'U030',username:'kundan.bhagalpur',password:'Utrust@2025',name:'Kundan Kumar',role:'officer',email:'kundan@utrust.in',avatar:'KK',branch:'Bhagalpur',phone:'9264476727'},
+  {id:'U031',username:'sanjeev.bhagalpur',password:'Utrust@2025',name:'Sanjeev Kumar',role:'officer',email:'sanjeev@utrust.in',avatar:'SK',branch:'Bhagalpur',phone:'6287901688'},
+  {id:'U032',username:'anaya.bhagalpur',password:'Utrust@2025',name:'Anaya Sharma',role:'officer',email:'anaya@utrust.in',avatar:'AS',branch:'Bhagalpur',phone:'9264476747'},
+  {id:'U033',username:'binod.bhagalpur',password:'Utrust@2025',name:'Binod Kumar',role:'officer',email:'binod@utrust.in',avatar:'BK',branch:'Bhagalpur',phone:'6287796617'},
+  {id:'U034',username:'gautam.bhagalpur',password:'Utrust@2025',name:'Gautam Kumar Singh',role:'officer',email:'gautam@utrust.in',avatar:'GS',branch:'Bhagalpur',phone:'6287796601'},
+  {id:'U035',username:'shariqe.bhagalpur',password:'Utrust@2025',name:'Shariqe Quiser',role:'officer',email:'shariqe@utrust.in',avatar:'SQ',branch:'Bhagalpur',phone:'9031021480'},
+  {id:'U036',username:'amol.bhagalpur',password:'Utrust@2025',name:'Amol Kumar',role:'officer',email:'amol@utrust.in',avatar:'AK',branch:'Bhagalpur',phone:'6287796602'},
+  {id:'U037',username:'pritam.bhagalpur',password:'Utrust@2025',name:'Pritam Kumar',role:'officer',email:'pritam@utrust.in',avatar:'PK',branch:'Bhagalpur',phone:'9031021475'},
+  {id:'U038',username:'sachin.bhagalpur',password:'Utrust@2025',name:'Sachin Kumar',role:'officer',email:'sachin@utrust.in',avatar:'SK',branch:'Bhagalpur',phone:'9031021454'},
+  {id:'U039',username:'neha.banka',password:'Utrust@2025',name:'Neha Kumari',role:'officer',email:'neha@utrust.in',avatar:'NK',branch:'Banka',phone:'9264476746'},
+  {id:'U040',username:'kunal.khagaria',password:'Utrust@2025',name:'Kunal Anand',role:'officer',email:'kunal@utrust.in',avatar:'KA',branch:'Khagaria',phone:'6204234330'},
+  {id:'U041',username:'ambuj.khagaria',password:'Utrust@2025',name:'Ambuj',role:'officer',email:'ambuj@utrust.in',avatar:'AM',branch:'Khagaria',phone:'7004744394'},
+  {id:'U042',username:'nitin.saharsa',password:'Utrust@2025',name:'Nitin Kumar',role:'officer',email:'nitin@utrust.in',avatar:'NK',branch:'Saharsa',phone:'9264476745'},
+  {id:'U043',username:'deepak.saharsa',password:'Utrust@2025',name:'Deepak Kumar',role:'officer',email:'deepak@utrust.in',avatar:'DK',branch:'Saharsa',phone:'9304511215'},
+  {id:'U044',username:'shakib.saharsa',password:'Utrust@2025',name:'Shakib Hassan',role:'officer',email:'shakib@utrust.in',avatar:'SH',branch:'Saharsa',phone:'9955250256'},
+  {id:'U045',username:'amresh.supaul',password:'Utrust@2025',name:'Amresh Kumar',role:'officer',email:'amresh@utrust.in',avatar:'AK',branch:'Supaul',phone:'9122676789'},
+  {id:'U046',username:'shivam.supaul',password:'Utrust@2025',name:'Shivam Panday',role:'officer',email:'shivam.p@utrust.in',avatar:'SP',branch:'Supaul',phone:'9264476728'},
+  {id:'U047',username:'abhishek.supaul',password:'Utrust@2025',name:'Abhishek Panday',role:'officer',email:'abhishek@utrust.in',avatar:'AP',branch:'Supaul',phone:'9599315817'},
+  {id:'U048',username:'intkhab.forbesganj',password:'Utrust@2025',name:'Intkhab Alam',role:'officer',email:'intkhab@utrust.in',avatar:'IA',branch:'Forbesganj',phone:'6287796615'},
+  {id:'U049',username:'awinash.forbesganj',password:'Utrust@2025',name:'Awinash Singh',role:'officer',email:'awinash@utrust.in',avatar:'AS',branch:'Forbesganj',phone:'9264476713'},
+  {id:'U050',username:'rajeev.forbesganj',password:'Utrust@2025',name:'Rajeev Ranjan Das',role:'officer',email:'rajeev@utrust.in',avatar:'RD',branch:'Forbesganj',phone:'9031021471'},
+  {id:'U051',username:'shashi.forbesganj',password:'Utrust@2025',name:'Shashi Sekhar',role:'officer',email:'shashi@utrust.in',avatar:'SS',branch:'Forbesganj',phone:'9031021469'},
+  {id:'U052',username:'hassam.forbesganj',password:'Utrust@2025',name:'Hassam Ahmad',role:'officer',email:'hassam@utrust.in',avatar:'HA',branch:'Forbesganj',phone:'9031021472'},
+  {id:'U053',username:'yusuf.forbesganj',password:'Utrust@2025',name:'Md Yusuf',role:'officer',email:'yusuf@utrust.in',avatar:'MY',branch:'Forbesganj',phone:'9031021467'},
+  {id:'U054',username:'mohid.forbesganj',password:'Utrust@2025',name:'Mohid Raza',role:'officer',email:'mohid@utrust.in',avatar:'MR',branch:'Forbesganj',phone:'7488711074'},
+  {id:'U055',username:'devam.forbesganj',password:'Utrust@2025',name:'Devam Verma',role:'officer',email:'devam@utrust.in',avatar:'DV',branch:'Forbesganj',phone:'6206841933'}
+];
+
+function loadCreds() {
+  try {
+    const s = localStorage.getItem('utrust_creds');
+    if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) return p; }
+  } catch(e) {}
+  return [...DEFAULT_CREDS];
+}
+let CRED_LIST = loadCreds();
+function saveCreds(list) {
+  CRED_LIST.length = 0;
+  list.forEach(function(u) { CRED_LIST.push(u); });
+  try { localStorage.setItem('utrust_creds', JSON.stringify(list)); } catch(e) {}
+}
+
+// ── CAR DATA ─────────────────────────────────────────────
+const BRANDS = {
+  'Maruti Suzuki':['Alto','Alto K10','WagonR','Swift','Dzire','Baleno','Ertiga','Vitara Brezza','Celerio','Ignis','S-Cross','Ciaz','S-Presso','Fronx','Jimny','Grand Vitara','XL6','Eeco'],
+  'Hyundai':['Santro','i10','Grand i10','Grand i10 Nios','i20','Active i20','Xcent','Aura','Verna','Elantra','Creta','Venue','Tucson','Alcazar','Kona Electric'],
+  'Tata':['Nano','Indica','Zest','Bolt','Tiago','Tigor','Nexon','Nexon EV','Harrier','Safari','Altroz','Punch','Punch EV','Hexa','Curvv'],
+  'Mahindra':['Bolero','Bolero Neo','Scorpio','Scorpio Classic','Scorpio N','Thar','XUV300','XUV400','XUV700','KUV100','TUV300','Marazzo','Alturas G4','Quanto','Xylo'],
+  'Honda':['Brio','Amaze','Jazz','WR-V','City','City Hybrid','Mobilio','BR-V','CR-V','Accord','Civic','Elevate'],
+  'Toyota':['Etios','Etios Liva','Corolla Altis','Yaris','Camry','Innova','Innova Crysta','Innova HyCross','Fortuner','Legender','Glanza','Urban Cruiser','Hyryder','Vellfire','Hilux'],
+  'Kia':['Seltos','Sonet','Carens','Carnival','EV6','Clavis'],
+  'Renault':['Pulse','Scala','Duster','Lodgy','Kwid','Triber','Kiger','Captur'],
+  'Nissan':['Micra','Sunny','Terrano','Kicks','Magnite','Datsun Go','Datsun Go+','Datsun Redi-Go'],
+  'Ford':['Figo','Figo Aspire','EcoSport','Endeavour','Freestyle','Classic','Mustang'],
+  'Chevrolet':['Beat','Spark','Sail','Sail Hatchback','Cruze','Enjoy','Captiva','Trailblazer','Tavera'],
+  'Volkswagen':['Polo','Vento','Jetta','Tiguan','T-Roc','Taigun','Virtus'],
+  'Skoda':['Fabia','Rapid','Octavia','Superb','Yeti','Kodiaq','Karoq','Kushaq','Slavia','Kylaq'],
+  'MG':['Hector','Hector Plus','ZS EV','Gloster','Astor','Comet EV','Windsor'],
+  'Jeep':['Compass','Meridian','Wrangler','Grand Cherokee'],
+  'BMW':['1 Series','3 Series','5 Series','7 Series','X1','X3','X5','X6','M3','M5'],
+  'Mercedes-Benz':['A-Class','C-Class','E-Class','S-Class','GLA','GLB','GLC','GLE','GLS','AMG GT'],
+  'Audi':['A3','A4','A6','A8','Q2','Q3','Q5','Q7','Q8','e-tron'],
+  'Other':['-- Type Manually --']
+};
+const VARIANTS = {
+  'Swift':['LXI','VXI','ZXI','ZXI+','VXI AMT','ZXI AMT','ZXI+ AMT'],
+  'Dzire':['LXI','VXI','ZXI','ZXI+','VXI AMT','ZXI AMT'],
+  'Baleno':['Sigma','Delta','Zeta','Alpha','Delta AMT','Zeta AMT'],
+  'WagonR':['LXI','VXI','ZXI','VXI AMT','ZXI AMT','VXI+','ZXI+'],
+  'Creta':['E','EX','S','S+','SX','SX(O)','SX Turbo','SX(O) Turbo','SX IVT'],
+  'Grand i10 Nios':['Era','Magna','Sportz','Asta','Asta(O)','Sportz Turbo'],
+  'i20':['Era','Magna','Sportz','Asta','Asta(O)','Sportz Turbo IMT','Asta Turbo DCT'],
+  'Verna':['EX','S','S+','SX','SX(O)','SX Turbo','SX IVT'],
+  'Venue':['E','S','S+','SX','SX+','SX(O)','SX Turbo iMT','SX(O) DCT'],
+  'Nexon':['XE','XM','XT','XZ','XZ+','XZ+ Lux','XMA','XZA','XZA+'],
+  'Tiago':['XE','XM','XT','XZ','XZ+','XZA+'],
+  'Harrier':['XE','XM','XT','XZ','XZ+','XZA','XZA+'],
+  'Safari':['XE','XM','XT','XZ','XZ+','XZA','XZA+','Adventure Edition'],
+  'Altroz':['XE','XM','XM+','XT','XZ','XZ+','iTurbo XZ','iTurbo XZ+'],
+  'Punch':['Pure','Adventure','Accomplished','Creative'],
+  'Bolero':['SLX','ZLX','B4','B6','B6 Opt'],
+  'Scorpio N':['Z2','Z4','Z6','Z8','Z8 L'],
+  'Thar':['AX(O) Petrol ST','AX(O) Diesel ST','LX Petrol HT','LX Diesel HT'],
+  'XUV300':['W4','W6','W8','W8(O)'],
+  'XUV700':['MX','AX3','AX5','AX5 L','AX7','AX7 L'],
+  'Seltos':['HTK','HTK+','HTX','HTX+','GTX','GTX+','HTX AT','GTX AT'],
+  'Sonet':['HTE','HTK','HTK+','HTX','HTX+','GTX','GTX+'],
+  'Carens':['Premium','Prestige','Prestige Plus','Luxury','Luxury Plus'],
+  'City':['SV','V','VX','ZX','V CVT','VX CVT','ZX CVT'],
+  'Innova Crysta':['GX','VX','ZX','GX AT','VX AT','ZX AT','Touring Sport'],
+  'Fortuner':['2WD MT','2WD AT','4WD MT','4WD AT','Legender'],
+  'EcoSport':['Ambiente','Trend','Trend+','Titanium','Titanium+','S'],
+  'Duster':['RxE','RxL','RxS','RxZ','RxZ EDC','RxZ AWD'],
+  'Kwid':['STD','RXT','RXT(O)','Climber','RXT AMT'],
+  'Kiger':['RXE','RXL','RXT','RXT(O)','RXT CVT'],
+  'Polo':['Comfortline','Highline','Highline+','GT TSI'],
+  'Taigun':['Comfortline 1.0','Highline 1.0','Topline 1.0','GT Plus 1.5 AT'],
+  'Kushaq':['Active 1.0','Ambition 1.0','Style 1.0','Ambition 1.5 AT'],
+  'Hector':['Style','Super','Smart','Sharp','Sharp Pro'],
+  'Compass':['Sport','Longitude','Limited','Limited Plus','S','Trailhawk'],
+  'default':['Base','Mid','Top','Premium','Luxury','Limited Edition','-- Type Manually --']
+};
+
+// ── PRICE ALGORITHM ───────────────────────────────────────
+function calcAlgo(idv, purchaseVal, year, insExpired, accidental, claimHistory, odometer, engine, fuel, challanAmt) {
+  var baseRaw = insExpired ? purchaseVal : idv;
+  var base = parseFloat(baseRaw) || 0;
+  if (!base || base < 1000 || !year) return null;
+  var age = new Date().getFullYear() - parseInt(year);
+  if (age < 0 || age > 30) return null;
+  var price = base;
+  var steps = [];
+  if (insExpired) {
+    steps.push({label:'Base: purchase value (insurance expired)', val:price, type:'base'});
+    var nip = price * 0.10;
+    price -= nip;
+    steps.push({label:'No insurance penalty (10%)', val:-nip, type:'minus'});
+  } else {
+    steps.push({label:'Base IDV (current insured value)', val:price, type:'base'});
+  }
+  var depN = [0,0.05,0.10,0.15,0.20,0.25,0.30,0.38,0.46,0.52,0.58,0.63,0.67,0.70,0.73,0.76,0.78,0.80,0.82,0.84,0.86];
+  var depE = [0,0.08,0.14,0.20,0.27,0.33,0.40,0.48,0.55,0.61,0.66,0.71,0.75,0.78,0.81,0.84,0.86,0.88,0.89,0.90,0.91];
+  var depTable = insExpired ? depE : depN;
+  var depIdx = Math.min(Math.max(age, 0), 20);
+  var dep = (depTable[depIdx] !== undefined) ? depTable[depIdx] : 0.86;
+  var depAmt = price * dep;
+  price -= depAmt;
+  steps.push({label:'Age depreciation (' + age + 'yr, ' + Math.round(dep*100) + '%)', val:-depAmt, type:'minus'});
+  if (odometer) {
+    var odo = parseInt(odometer);
+    var diff = odo - age * 12000;
+    if (diff > 0) {
+      var pen = Math.min(diff * 0.8, price * 0.08);
+      price -= pen;
+      steps.push({label:'High odometer penalty', val:-pen, type:'minus'});
+    } else if (diff < -5000) {
+      var bon = Math.min(Math.abs(diff) * 0.3, price * 0.04);
+      price += bon;
+      steps.push({label:'Low odometer bonus', val:bon, type:'plus'});
+    }
+  }
+  if (accidental === 'Yes') {
+    var ap = price * 0.12;
+    price -= ap;
+    steps.push({label:'Accidental penalty (12%)', val:-ap, type:'minus'});
+  }
+  var clMap = {'None':0,'1 Minor':0.04,'1 Major':0.10,'2+ Claims':0.15,'Unknown':0.06};
+  var cp = clMap[claimHistory] || 0;
+  if (cp > 0) {
+    var cpen = price * cp;
+    price -= cpen;
+    steps.push({label:'Claim history (' + claimHistory + ')', val:-cpen, type:'minus'});
+  }
+  var engMap = {'Excellent':0.03,'Good':0,'Fair':-0.05,'Poor':-0.12};
+  var ea = engMap[engine] || 0;
+  if (ea !== 0) {
+    var eadj = price * ea;
+    price += eadj;
+    steps.push({label:'Engine condition (' + engine + ')', val:eadj, type:ea>0?'plus':'minus'});
+  }
+  var fMap = {'Diesel':0.03,'Electric':0.05,'Hybrid':0.04,'CNG':-0.02,'Petrol':0,'LPG':-0.03};
+  var fa = fMap[fuel] || 0;
+  if (fa !== 0) {
+    var fadj = price * fa;
+    price += fadj;
+    steps.push({label:'Fuel type (' + fuel + ')', val:fadj, type:fa>0?'plus':'minus'});
+  }
+  var margin = price * 0.08;
+  price -= margin;
+  steps.push({label:'Dealer margin (8%)', val:-margin, type:'minus'});
+  // Challan deduction — full outstanding amount deducted from price
+  if (challanAmt && parseFloat(challanAmt) > 0) {
+    var chal = parseFloat(challanAmt);
+    price -= chal;
+    steps.push({label:'Pending challans deduction (full)', val:-chal, type:'minus'});
+  }
+  price = Math.max(price, 10000);
+  steps.push({label:'Recommended Purchase Price', val:price, type:'result'});
+  return {price: Math.round(price), steps: steps};
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+const fmt = function(n) { return n ? '\u20B9' + Math.round(n).toLocaleString('en-IN') : '\u2014'; };
+const fmtL = function(n) {
+  if (!n || n < 100) return '\u2014';
+  if (n < 100000) return '\u20B9' + Math.round(n).toLocaleString('en-IN');
+  return '\u20B9' + (n/100000).toFixed(2) + 'L';
+};
+
+function StatusBadge(props) {
+  var cls = {pending:'b-pend',approved:'b-appr',rejected:'b-rejt',draft:'b-drft',review:'b-revw'};
+  var lbl = {pending:'PENDING',approved:'APPROVED',rejected:'REJECTED',draft:'DRAFT',review:'IN REVIEW'};
+  return React.createElement('span', {className:'badge ' + (cls[props.status] || 'b-drft')}, lbl[props.status] || (props.status||'').toUpperCase());
+}
+
+function Toast(props) {
+  useEffect(function() { var t = setTimeout(props.onClose, 3500); return function() { clearTimeout(t); }; }, []);
+  return (
+    <div className={'toast ' + props.type}>
+      <span>{props.type === 'success' ? '\u2713' : props.type === 'error' ? '\u2717' : '\u2139'}</span>
+      {props.message}
+    </div>
+  );
+}
+
+function Modal(props) {
+  return (
+    <div className="modal-bg" onClick={function(e) { if(e.target === e.currentTarget) props.onClose(); }}>
+      <div className="modal">
+        <div className="modal-ttl">{props.title}</div>
+        {props.sub && <div className="modal-sub">{props.sub}</div>}
+        {props.children}
+      </div>
+    </div>
+  );
+}
+
+// ── CAMERA ────────────────────────────────────────────────
+function CameraCapture(props) {
+  var label = props.label; var onCapture = props.onCapture; var captured = props.captured;
+  var videoRef = useRef(null);
+  var canvasRef = useRef(null);
+  var streamRef = useRef(null);
+  var [open, setOpen] = useState(false);
+  var [err, setErr] = useState('');
+  var [facing, setFacing] = useState('environment');
+
+  function killStream() {
+    if (streamRef.current) { streamRef.current.getTracks().forEach(function(t) { t.stop(); }); streamRef.current = null; }
+    if (videoRef.current) { videoRef.current.srcObject = null; }
+  }
+
+  function startCamera(f) {
+    setErr('');
+    killStream();
+    var target = f || 'environment';
+    var tries = [
+      {video:{facingMode:{exact:target},width:{ideal:1280},height:{ideal:960}}},
+      {video:{facingMode:target}},
+      {video:true}
+    ];
+    var idx = 0;
+    function tryNext() {
+      if (idx >= tries.length) { setErr('Camera not available. Allow permission in settings.'); return; }
+      navigator.mediaDevices.getUserMedia(tries[idx++]).then(function(stream) {
+        streamRef.current = stream;
+        setFacing(target);
+        setOpen(true);
+        requestAnimationFrame(function() {
+          if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(function(){}); }
+        });
+      }).catch(function() { tryNext(); });
+    }
+    tryNext();
+  }
+
+  function stopCamera() { killStream(); setOpen(false); }
+
+  function capture() {
+    var v = videoRef.current; var c = canvasRef.current;
+    if (!v || !c) return;
+    c.width = v.videoWidth || 640; c.height = v.videoHeight || 480;
+    var ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    var ts = new Date().toLocaleString('en-IN');
+    var bh = Math.max(26, Math.round(c.height * 0.055));
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, c.height - bh, c.width, bh);
+    ctx.fillStyle = '#f5a623'; ctx.font = 'bold ' + Math.round(bh * 0.52) + 'px monospace';
+    ctx.fillText('\uD83D\uDCCD ' + ts + ' | Utrust', 10, c.height - Math.round(bh * 0.2));
+    var url = c.toDataURL('image/jpeg', 0.88);
+    stopCamera(); onCapture(url);
+  }
+
+  function flipCam() { startCamera(facing === 'environment' ? 'user' : 'environment'); }
+
+  useEffect(function() { return function() { killStream(); }; }, []);
+
+  return (
+    <div>
+      <div className={'cam-slot' + (captured ? ' captured' : '')} onClick={function() { if (!captured) startCamera('environment'); }}>
+        <div className="cam-preview">
+          {captured
+            ? <img src={captured} alt={label} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+            : <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:16}}>
+                <span style={{fontSize:24,marginBottom:6}}>📷</span>
+                <span style={{fontSize:11,color:err?'var(--red)':'var(--tx3)',textAlign:'center'}}>{err || 'Tap to capture'}</span>
+              </div>
+          }
+        </div>
+        <div className="cam-lbl">{label}{captured ? ' \u2713' : ''}</div>
+      </div>
+      {captured && (
+        <button className="btn btn-danger btn-sm" style={{width:'100%',marginTop:4}}
+          onClick={function(e) { e.stopPropagation(); onCapture(null); startCamera('environment'); }}>
+          🔄 Retake
+        </button>
+      )}
+      {open && (
+        <div className="cam-modal">
+          <div style={{color:'#fff',fontFamily:'Syne,sans-serif',fontSize:14,fontWeight:700,marginBottom:8,textAlign:'center'}}>{label}</div>
+          <div className="cam-modal-inner">
+            <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',display:'block'}} />
+            <canvas ref={canvasRef} style={{display:'none'}} />
+          </div>
+          <div style={{color:facing==='environment'?'var(--grn)':'var(--acc)',fontSize:11,textAlign:'center',marginTop:6,fontFamily:'DM Mono,monospace'}}>
+            {facing === 'environment' ? '🔙 Rear camera' : '🤳 Front camera'}
+          </div>
+          <div style={{display:'flex',gap:14,marginTop:12,alignItems:'center'}}>
+            <button className="btn btn-ghost" onClick={stopCamera}>✕ Cancel</button>
+            <div className="shutter" onClick={capture}>📸</div>
+            <button className="btn btn-ghost" onClick={flipCam}>🔄 Flip</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── LOGIN ─────────────────────────────────────────────────
+function Login(props) {
+  var [user, setUser] = useState('');
+  var [pass, setPass] = useState('');
+  var [err, setErr] = useState('');
+  function doLogin() {
+    var u = CRED_LIST.find(function(c) { return c.username === user.trim() && c.password === pass; });
+    if (u) { props.onLogin(Object.assign({}, u)); setErr(''); }
+    else setErr('Invalid username or password. Contact your Incharge.');
+  }
+  return (
+    <div className="login-screen">
+      <div className="login-bg" /><div className="login-grid" />
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-icon">🚗</div>
+          <div>
+            <div style={{fontFamily:'Syne,sans-serif',fontSize:20,fontWeight:800}}>Utrust</div>
+            <div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace',letterSpacing:'0.08em'}}>VEHICLE MANAGEMENT SYSTEM</div>
+          </div>
+        </div>
+        <div style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:700,marginBottom:4}}>Sign In</div>
+        <div style={{fontSize:13,color:'var(--tx2)',marginBottom:22}}>Enter your assigned credentials to continue</div>
+        <div className="field"><label>Username</label>
+          <input value={user} onChange={function(e){setUser(e.target.value);}} placeholder="e.g. dilnawaz.purnea" autoComplete="off" onKeyDown={function(e){if(e.key==='Enter')doLogin();}} />
+        </div>
+        <div className="field"><label>Password</label>
+          <input type="password" value={pass} onChange={function(e){setPass(e.target.value);}} placeholder="••••••••" autoComplete="new-password" onKeyDown={function(e){if(e.key==='Enter')doLogin();}} />
+        </div>
+        {err && <div style={{background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:'var(--r)',padding:'10px 13px',fontSize:12,color:'var(--red)',marginBottom:14}}>⚠ {err}</div>}
+        <button className="btn-primary" onClick={doLogin}>Sign In →</button>
+        <div style={{textAlign:'center',marginTop:14,fontSize:11,color:'var(--tx3)'}}>Contact Utrust Incharge for login credentials</div>
+      </div>
+    </div>
+  );
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────
+function Sidebar(props) {
+  var user = props.user; var page = props.page; var setPage = props.setPage;
+  var onLogout = props.onLogout; var pendingCount = props.pendingCount;
+  var navAdmin = [
+    {id:'dash',icon:'⬡',label:'Dashboard'},
+    {id:'vehicles',icon:'🚗',label:'Vehicles'},
+    {id:'approval',icon:'✅',label:'Approvals',badge:pendingCount},
+    {id:'users',icon:'👥',label:'Employees'},
+    {id:'mis',icon:'📈',label:'MIS'}
+  ];
+  var navLeader = [
+    {id:'dash',icon:'⬡',label:'Dashboard'},
+    {id:'vehicles',icon:'🚗',label:'Vehicles'},
+    {id:'approval',icon:'✅',label:'Approvals',badge:pendingCount},
+    {id:'mis',icon:'📈',label:'MIS'}
+  ];
+  var navOfficer = [
+    {id:'dash',icon:'⬡',label:'Dashboard'},
+    {id:'vehicles',icon:'🚗',label:'My Vehicles'},
+    {id:'add',icon:'➕',label:'New'}
+  ];
+  var nav = user.role === 'admin' ? navAdmin : user.role === 'leader' ? navLeader : navOfficer;
+  var roleLabel = {admin:'ADMINISTRATOR',leader:'UTRUST INCHARGE',officer:'EVALUATOR'};
+  return (
+    <div className="sb">
+      <div className="sb-logo">
+        <div className="sb-icon">🚗</div>
+        <div><div className="sb-name">Utrust</div></div>
+      </div>
+      <div className="sb-user">
+        <div className={'av ' + user.role}>{user.avatar}</div>
+        <div style={{minWidth:0}}>
+          <div className="sb-uname">{user.name}</div>
+          <div className="sb-urole">{roleLabel[user.role]}</div>
+          <div className="sb-ubranch">📍 {user.branch}</div>
+        </div>
+      </div>
+      <div className="nav-area">
+        <div className="sb-sec">Navigation</div>
+        {nav.map(function(n) {
+          return (
+            <div key={n.id} className={'nav-it' + (page===n.id?' active':'')} onClick={function(){setPage(n.id);}}>
+              <span className="nav-ic">{n.icon}</span>
+              <span className="nav-txt">{n.label}</span>
+              {n.badge > 0 && <span className="nav-bd">{n.badge}</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="sb-foot">
+        <button className="logout-btn" onClick={onLogout}>⇐ <span>Sign Out</span></button>
+      </div>
+    </div>
+  );
+}
+
+// ── BAR ROW (standalone — not inside another component) ───
+function BarRow(props) {
+  var pct = props.max ? (props.val / props.max * 100) : 0;
+  return (
+    <div className="bar-row">
+      <div className="bar-lbl" style={{fontSize:11,width:props.wide?110:90}}>{props.label}</div>
+      <div style={{flex:1}}>
+        <div className="bar-track">
+          <div className="bar-fill" style={{width:pct+'%',background:props.color||'var(--acc)'}} />
+        </div>
+        {props.sub && <div style={{fontSize:10,color:'var(--tx3)',marginTop:2}}>{props.sub}</div>}
+      </div>
+      <div className="bar-val">{props.val}</div>
+    </div>
+  );
+}
+
+// ── SAMPLE VEHICLES ───────────────────────────────────────
+var SAMPLE_VEHICLES = [
+  {id:'V001',reg:'BR04AB1234',brand:'Maruti Suzuki',model:'Swift',variant:'ZXI',year:2019,fuel:'Petrol',transmission:'Manual',odometer:42000,status:'approved',officer:'Dilnawaz Ahmad',officerId:'U002',branch:'Purnea',price:485000,algo_price:470000,approved_price:480000,idv:520000,purchase_value:0,insurance_expired:false,rating:7,submitted:'2026-03-20',approved:'2026-03-21',ownership:'1st',insurance_valid_od:'2026-12-31',insurance_valid_tp:'2027-06-30',claim_history:'None',engine:'Good',tyres:'Good',battery:'Good',electricals:'Good',accidental:'No',flood:'No',photos:{},docs:{}},
+  {id:'V002',reg:'BR08CD5678',brand:'Hyundai',model:'Creta',variant:'SX',year:2021,fuel:'Diesel',transmission:'Automatic',odometer:28000,status:'pending',officer:'Sajan Kr Saha',officerId:'U003',branch:'Purnea',price:1050000,algo_price:980000,approved_price:0,idv:1120000,purchase_value:0,insurance_expired:false,rating:9,submitted:'2026-03-24',ownership:'1st',insurance_valid_od:'2026-09-15',insurance_valid_tp:'2026-09-15',claim_history:'1 Minor',engine:'Excellent',tyres:'Excellent',battery:'Good',electricals:'Excellent',accidental:'No',flood:'No',photos:{},docs:{}}
+];
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function Dashboard(props) {
+  var vehicles = props.vehicles; var user = props.user; var setPage = props.setPage;
+  var mine = user.role === 'officer' ? vehicles.filter(function(v){return v.officerId===user.id;}) : vehicles;
+  var total = mine.length;
+  var appr = mine.filter(function(v){return v.status==='approved';}).length;
+  var pend = mine.filter(function(v){return v.status==='pending'||v.status==='review';}).length;
+  var avgP = mine.filter(function(v){return v.price>0;}).reduce(function(a,v){return a+v.price;},0) / (mine.filter(function(v){return v.price>0;}).length || 1);
+  var recent = mine.slice(0,5);
+  return (
+    <div>
+      <div className="sg">
+        {[{l:'Total',v:total,i:'🚗',s:'inspections'},{l:'Approved',v:appr,i:'✅',s:total?Math.round(appr/total*100)+'% rate':'-'},{l:'Pending',v:pend,i:'⏳',s:'awaiting review'},{l:'Avg Price',v:fmtL(avgP),i:'💰',s:'estimated'}].map(function(s,i) {
+          return (
+            <div key={i} className="sc">
+              <div className="sc-lbl">{s.l}</div>
+              <div className="sc-val">{s.v}</div>
+              <div className="sc-sub">{s.s}</div>
+              <div className="sc-ico">{s.i}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="card">
+        <div className="card-hdr">
+          <div className="card-ttl">Recent Inspections</div>
+          <button className="btn btn-ghost btn-sm" onClick={function(){setPage('vehicles');}}>View All →</button>
+        </div>
+        <div style={{overflowX:'auto'}}>
+          <table>
+            <thead><tr><th>Reg</th><th>Vehicle</th><th>Branch</th><th>Price</th><th>Status</th></tr></thead>
+            <tbody>
+              {recent.map(function(v) {
+                return (
+                  <tr key={v.id}>
+                    <td><span style={{fontFamily:'DM Mono,monospace',color:'var(--acc)',fontSize:12}}>{v.reg}</span></td>
+                    <td><b>{v.brand} {v.model}</b><br/><span style={{fontSize:11,color:'var(--tx3)'}}>{v.year}</span></td>
+                    <td style={{fontSize:12,color:'var(--tx2)'}}>{v.branch}</td>
+                    <td style={{fontFamily:'DM Mono,monospace',fontWeight:700,color:'var(--grn)'}}>{fmtL(v.price)}</td>
+                    <td><StatusBadge status={v.status} /></td>
+                  </tr>
+                );
+              })}
+              {recent.length === 0 && <tr><td colSpan={5} style={{textAlign:'center',padding:40,color:'var(--tx3)'}}>No inspections yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── VEHICLES LIST ─────────────────────────────────────────
+function VehiclesList(props) {
+  var vehicles = props.vehicles; var user = props.user;
+  var [search, setSearch] = useState('');
+  var [filter, setFilter] = useState('all');
+  var [branch, setBranch] = useState('all');
+  var BRANCHES = ['Purnea','Bhagalpur','Forbesganj','Kishanganj','Katihar','Banka','Khagaria','Saharsa','Supaul'];
+  var mine = user.role === 'officer' ? vehicles.filter(function(v){return v.officerId===user.id;}) : vehicles;
+  var filtered = mine.filter(function(v) {
+    var q = search.toLowerCase();
+    var ms = !q || (v.reg||'').toLowerCase().includes(q) || (v.brand||'').toLowerCase().includes(q) || (v.model||'').toLowerCase().includes(q);
+    var mf = filter === 'all' || v.status === filter;
+    var mb = branch === 'all' || v.branch === branch;
+    return ms && mf && mb;
+  });
+  return (
+    <div>
+      <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
+        <div className="search-bar" style={{flex:1,minWidth:180}}>
+          <span>🔍</span>
+          <input placeholder="Search reg, brand, model..." value={search} onChange={function(e){setSearch(e.target.value);}} />
+        </div>
+        {user.role !== 'officer' && (
+          <select style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontSize:13,outline:'none'}} value={branch} onChange={function(e){setBranch(e.target.value);}}>
+            <option value="all">All Branches</option>
+            {BRANCHES.map(function(b){return <option key={b}>{b}</option>;})}
+          </select>
+        )}
+        <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+          {['all','pending','approved','rejected','draft'].map(function(f) {
+            return <button key={f} className={'btn btn-sm '+(filter===f?'btn-acc':'btn-ghost')} onClick={function(){setFilter(f);}} style={{textTransform:'uppercase',fontSize:10}}>{f}</button>;
+          })}
+        </div>
+        {(user.role === 'officer' || user.role === 'admin') && (
+          <button className="btn btn-acc btn-sm" style={{marginLeft:'auto'}} onClick={props.onAddNew}>➕ New</button>
+        )}
+      </div>
+      <div className="card" style={{overflowX:'auto'}}>
+        <div className="card-hdr">
+          <div className="card-ttl">Vehicle Records <span style={{color:'var(--tx3)',fontWeight:400,fontSize:11,fontFamily:'DM Mono,monospace'}}>({filtered.length})</span></div>
+        </div>
+        <table>
+          <thead><tr><th>Reg</th><th>Vehicle</th><th>Year</th><th>Odo</th><th>Branch</th><th>Evaluator</th><th>Est. Price</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {filtered.length === 0 && <tr><td colSpan={9} style={{textAlign:'center',padding:36,color:'var(--tx3)'}}>No vehicles found</td></tr>}
+            {filtered.map(function(v) {
+              return (
+                <tr key={v.id}>
+                  <td><span style={{fontFamily:'DM Mono,monospace',color:'var(--acc)',fontSize:12}}>{v.reg}</span></td>
+                  <td><b>{v.brand} {v.model}</b><br/><span style={{fontSize:10,color:'var(--tx3)'}}>{v.variant}</span></td>
+                  <td style={{color:'var(--tx2)'}}>{v.year}</td>
+                  <td style={{fontFamily:'DM Mono,monospace',fontSize:12}}>{(v.odometer||0).toLocaleString('en-IN')}</td>
+                  <td><span style={{fontSize:11,color:'var(--acc)',fontFamily:'DM Mono,monospace'}}>{v.branch}</span></td>
+                  <td style={{fontSize:12,color:'var(--tx2)'}}>{v.officer}</td>
+                  <td style={{fontFamily:'DM Mono,monospace',fontWeight:700,color:'var(--grn)'}}>{fmtL(v.price)}</td>
+                  <td><StatusBadge status={v.status} /></td>
+                  <td>
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+                      <button className="btn btn-ghost btn-sm" onClick={function(){props.setSelectedVehicle(v);props.setPage('detail');}}>View</button>
+                      <button className="btn btn-ghost btn-sm" style={{color:'var(--acc)',fontSize:11}} onClick={function(){generateCustomerPDF(v);}}>📱</button>
+                      <button className="btn btn-ghost btn-sm" style={{color:'var(--blu)',fontSize:11}} title="Vendor Report — no pricing" onClick={function(){generateVendorPDF(v);}}>🏪</button>
+                      {user.role === 'admin' && <button className="btn btn-danger btn-sm" onClick={function(){props.onDelete(v.id);}}>🗑</button>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── NEW INSPECTION FORM ───────────────────────────────────
+function NewInspection(props) {
+  var user = props.user;
+  var [step, setStep] = useState(0);
+  var [mBrand, setMBrand] = useState('');
+  var [mModel, setMModel] = useState('');
+  var [mVariant, setMVariant] = useState('');
+  var [mYear, setMYear] = useState('');
+  var [mTrans, setMTrans] = useState('');
+  var [data, setData] = useState({
+    reg:'', brand:'', model:'', variant:'', year:'', fuel:'', transmission:'', ownership:'1st',
+    odometer:'', insurance_expired:false, insurance_valid_od:'', insurance_valid_tp:'',
+    idv:'', purchase_value:'', claim_history:'None',
+    engine:'', tyres:'', battery:'', electricals:'', accidental:'No', flood:'No', rating:7,
+    price:'', remarks:'', customer_expectation:'', seller_name:'', challan_amount:'', challan_details:'', challan_verified:null,
+    photos:{front:null,rear:null,left:null,right:null,interior1:null,interior2:null,engine:null,chassis:null,odometer_photo:null},
+    docs:{rc:null,insurance:null,pollution:null,extra:null}
+  });
+
+  function set(k,v) { setData(function(p){return Object.assign({},p,{[k]:v});}); }
+  function setPhoto(k,v) { setData(function(p){return Object.assign({},p,{photos:Object.assign({},p.photos,{[k]:v})});}); }
+  function setDoc(k,v) { setData(function(p){return Object.assign({},p,{docs:Object.assign({},p.docs,{[k]:v})});}); }
+
+  var brandList = Object.keys(BRANDS);
+  var modelList = data.brand && data.brand !== 'Other' ? (BRANDS[data.brand] || []) : [];
+  var variantList = data.model && VARIANTS[data.model] ? VARIANTS[data.model] : VARIANTS['default'];
+  var years = [2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,'-- Enter Manually --'];
+  var TRANS_LIST = ['Manual','Automatic','CVT','AMT','DCT','iMT','-- Enter Manually --'];
+  var photoSlots = ['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var photoDone = photoSlots.filter(function(k){return !!data.photos[k];}).length;
+
+  var finalBrand = data.brand === 'Other' ? mBrand : data.brand;
+  var finalModel = data.model === '-- Type Manually --' ? mModel : data.model;
+  var finalVariant = data.variant === '-- Type Manually --' ? mVariant : data.variant;
+  var finalYear = data.year === '-- Enter Manually --' ? mYear : data.year;
+  var finalTrans = data.transmission === '-- Enter Manually --' ? mTrans : data.transmission;
+
+  var algo = calcAlgo(data.idv, data.purchase_value, finalYear||data.year, data.insurance_expired, data.accidental, data.claim_history, data.odometer, data.engine, data.fuel, data.challan_amount);
+
+  function handleSubmit(isDraft) {
+    if (!isDraft) {
+      if (!data.reg) { props.showToast('Registration number is required','error'); return; }
+      if (!finalBrand && !mBrand) { props.showToast('Select or type a Brand','error'); return; }
+      if (!finalModel && !mModel) { props.showToast('Select or type a Model','error'); return; }
+      if (!data.price || parseInt(data.price) <= 0) { props.showToast('Enter your estimated price','error'); return; }
+    }
+    var docsClean = {};
+    Object.keys(data.docs).forEach(function(k){ var d=data.docs[k]; docsClean[k]=d?{name:d.name,type:d.type}:null; });
+    props.onSubmit(Object.assign({},data,{
+      id:'V'+Date.now(), brand:finalBrand, model:finalModel, variant:finalVariant,
+      year:finalYear||data.year, transmission:finalTrans||data.transmission,
+      odometer:parseInt(data.odometer)||0, price:parseInt(data.price)||0,
+      customer_expectation:parseInt(data.customer_expectation)||0, seller_name:data.seller_name||'', seller_phone:data.seller_phone||'', challan_amount:parseFloat(data.challan_amount)||0, challan_details:data.challan_details||'', challan_verified:data.challan_verified||false,
+      algo_price:algo?algo.price:0, idv:parseInt(data.idv)||0, purchase_value:parseInt(data.purchase_value)||0,
+      officer:user.name, officerId:user.id, branch:user.branch,
+      docs:docsClean, status:isDraft?'draft':'pending',
+      submitted:new Date().toISOString().slice(0,10)
+    }));
+  }
+
+  var stepNames = ['Basic Info','Odometer','Photos','Documents','Insurance','Assessment','Pricing','Submit'];
+
+  function renderStep() {
+    if (step === 0) return (
+      <div className="fcard">
+        <div className="fcard-ttl">🚗 Vehicle Basic Details</div>
+        <div className="fcard-sub">All * fields are mandatory</div>
+        <div className="fg">
+          <div className="field s2"><label>Registration Number *</label>
+            <input value={data.reg} onChange={function(e){set('reg',e.target.value.toUpperCase());}} placeholder="e.g. BR04AB1234" style={{fontFamily:'DM Mono,monospace',letterSpacing:'0.1em',fontSize:16}} />
+          </div>
+          <div className="field"><label>Seller / Customer Name *</label>
+            <input value={data.seller_name} onChange={function(e){set('seller_name',e.target.value);}} placeholder="Full name of vehicle owner" />
+          </div>
+          <div className="field"><label>Seller Phone</label>
+            <input type="tel" value={data.seller_phone||''} onChange={function(e){set('seller_phone',e.target.value);}} placeholder="Contact number" />
+          </div>
+          <div className="field">
+            <label>Brand *</label>
+            <select value={data.brand} onChange={function(e){set('brand',e.target.value);set('model','');set('variant','');}}>
+              <option value="">Select Brand</option>
+              {brandList.map(function(b){return <option key={b}>{b}</option>;})}
+            </select>
+            {data.brand === 'Other' && <input value={mBrand} onChange={function(e){setMBrand(e.target.value);}} placeholder="Type brand name..." style={{marginTop:6,width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',outline:'none'}} />}
+          </div>
+          <div className="field">
+            <label>Model *</label>
+            {data.brand && data.brand !== 'Other' ? (
+              <div>
+                <select value={data.model} onChange={function(e){set('model',e.target.value);set('variant','');}}>
+                  <option value="">Select Model</option>
+                  {modelList.map(function(m){return <option key={m}>{m}</option>;})}
+                  <option value="-- Type Manually --">-- Type Manually --</option>
+                </select>
+                {data.model === '-- Type Manually --' && <input value={mModel} onChange={function(e){setMModel(e.target.value);}} placeholder="Type model..." style={{marginTop:6,width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',outline:'none'}} />}
+              </div>
+            ) : (
+              <input value={mModel} onChange={function(e){setMModel(e.target.value);}} placeholder="Type model name..." style={{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',outline:'none'}} />
+            )}
+          </div>
+          <div className="field">
+            <label>Variant</label>
+            {data.model && data.model !== '-- Type Manually --' && data.brand !== 'Other' ? (
+              <div>
+                <select value={data.variant} onChange={function(e){set('variant',e.target.value);}}>
+                  <option value="">Select Variant</option>
+                  {variantList.map(function(v){return <option key={v}>{v}</option>;})}
+                </select>
+                {data.variant === '-- Type Manually --' && <input value={mVariant} onChange={function(e){setMVariant(e.target.value);}} placeholder="Type variant..." style={{marginTop:6,width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',outline:'none'}} />}
+              </div>
+            ) : (
+              <input value={mVariant} onChange={function(e){setMVariant(e.target.value);}} placeholder="Type variant..." style={{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',outline:'none'}} />
+            )}
+          </div>
+          <div className="field">
+            <label>Year *</label>
+            <select value={data.year} onChange={function(e){set('year',e.target.value);}}>
+              <option value="">Select Year</option>
+              {years.map(function(y){return <option key={y}>{y}</option>;})}
+            </select>
+            {data.year === '-- Enter Manually --' && <input value={mYear} onChange={function(e){setMYear(e.target.value);}} placeholder="e.g. 2017" style={{marginTop:6,width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',fontFamily:'DM Mono,monospace',fontSize:16,outline:'none'}} />}
+          </div>
+          <div className="field">
+            <label>Fuel Type *</label>
+            <select value={data.fuel} onChange={function(e){set('fuel',e.target.value);}}>
+              <option value="">Select</option>
+              {['Petrol','Diesel','CNG','Electric','Hybrid','LPG'].map(function(f){return <option key={f}>{f}</option>;})}
+            </select>
+          </div>
+          <div className="field">
+            <label>Transmission *</label>
+            <select value={data.transmission} onChange={function(e){set('transmission',e.target.value);}}>
+              <option value="">Select</option>
+              {TRANS_LIST.map(function(t){return <option key={t}>{t}</option>;})}
+            </select>
+            {data.transmission === '-- Enter Manually --' && <input value={mTrans} onChange={function(e){setMTrans(e.target.value);}} placeholder="Type transmission..." style={{marginTop:6,width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',outline:'none'}} />}
+          </div>
+          <div className="field">
+            <label>Ownership</label>
+            <select value={data.ownership} onChange={function(e){set('ownership',e.target.value);}}>
+              {['1st','2nd','3rd','4th+'].map(function(o){return <option key={o}>{o}</option>;})}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+
+    if (step === 1) return (
+      <div className="fcard">
+        <div className="fcard-ttl">📍 Odometer Reading</div>
+        <div className="fcard-sub">Enter reading then capture photo — timestamp auto-embedded</div>
+        <div className="field" style={{marginBottom:18}}>
+          <label>Odometer (km) *</label>
+          <input type="number" value={data.odometer} onChange={function(e){set('odometer',e.target.value);}} placeholder="e.g. 42000" style={{fontFamily:'DM Mono,monospace',fontSize:22,padding:'13px'}} />
+        </div>
+        <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:8,letterSpacing:'0.07em',textTransform:'uppercase'}}>Odometer Photo (mandatory)</div>
+        <CameraCapture label="Odometer Reading" onCapture={function(v){setPhoto('odometer_photo',v);}} captured={data.photos.odometer_photo} />
+      </div>
+    );
+
+    if (step === 2) return (
+      <div className="fcard">
+        <div className="fcard-ttl">📷 Inspection Photos</div>
+        <div className="fcard-sub">{photoDone}/8 captured — rear camera opens by default</div>
+        <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}}>Exterior (4 required)</div>
+        <div className="cam-grid" style={{marginBottom:16}}>
+          {[['front','Front View *'],['rear','Rear View *'],['left','Left Side *'],['right','Right Side *']].map(function(pair) {
+            return <CameraCapture key={pair[0]} label={pair[1]} onCapture={function(v){setPhoto(pair[0],v);}} captured={data.photos[pair[0]]} />;
+          })}
+        </div>
+        <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}}>Interior (min 2 required)</div>
+        <div className="cam-grid" style={{marginBottom:16}}>
+          <CameraCapture label="Interior — Dashboard *" onCapture={function(v){setPhoto('interior1',v);}} captured={data.photos.interior1} />
+          <CameraCapture label="Interior — Rear Seats *" onCapture={function(v){setPhoto('interior2',v);}} captured={data.photos.interior2} />
+        </div>
+        <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}}>Under Hood</div>
+        <div className="cam-grid" style={{marginBottom:16}}>
+          <CameraCapture label="Engine Bay *" onCapture={function(v){setPhoto('engine',v);}} captured={data.photos.engine} />
+          <CameraCapture label="Chassis / VIN *" onCapture={function(v){setPhoto('chassis',v);}} captured={data.photos.chassis} />
+        </div>
+        <div className="field"><label>Inspection Remarks</label>
+          <textarea rows={3} value={data.remarks} onChange={function(e){set('remarks',e.target.value);}} placeholder="Note scratches, dents, damages..." style={{resize:'vertical'}} />
+        </div>
+      </div>
+    );
+
+    if (step === 3) return (
+      <div className="fcard">
+        <div className="fcard-ttl">📋 Document Upload</div>
+        <div className="fcard-sub">RC and Insurance are mandatory</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+          {[['rc','📄','RC Certificate *'],['insurance','🛡','Insurance Doc *'],['pollution','🌿','PUC Certificate'],['extra','📎','Additional Doc']].map(function(item) {
+            var k=item[0]; var icon=item[1]; var lbl=item[2]; var val=data.docs[k];
+            return (
+              <div key={k}>
+                <input type="file" id={'doc-'+k} accept="image/*,application/pdf" style={{display:'none'}}
+                  onChange={function(e) {
+                    var file = e.target.files[0]; if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { setDoc(k, {name:file.name,type:file.type,data:ev.target.result}); };
+                    reader.readAsDataURL(file);
+                  }} />
+                <div className={'upzone'+(val?' done':'')} onClick={function(){document.getElementById('doc-'+k).click();}}>
+                  <div style={{fontSize:22,marginBottom:6}}>{val ? '✅' : icon}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:'var(--tx2)'}}>{val ? 'Uploaded ✓' : 'Tap to Upload'}</div>
+                  <div style={{fontSize:10,color:'var(--tx3)',marginTop:3,wordBreak:'break-all'}}>{val ? val.name : lbl}</div>
+                </div>
+                {val && <button className="btn btn-danger btn-sm" style={{width:'100%',marginTop:4}} onClick={function(){setDoc(k,null);}}>Remove</button>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+    if (step === 4) return (
+      <div className="fcard">
+        <div className="fcard-ttl">🛡 Insurance & IDV</div>
+        <div className="fcard-sub">Toggle if insurance is expired — affects price algorithm</div>
+        <div style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',marginBottom:14,fontSize:12,color:'var(--tx3)',lineHeight:1.6}}>
+          <b style={{color:'var(--acc)',display:'block',marginBottom:4}}>📐 How the algorithm works:</b>
+          <b>With active insurance:</b> Base = IDV → subtract age depreciation (RTO rates: 5%/yr up to 25% at 5yr, 86% at 20yr) → adjust for odometer, accidents, claim history, engine condition, fuel type → subtract 8% dealer margin → deduct full challan amount.<br/>
+          <b>With expired insurance:</b> Base = Purchase value → extra 10% no-insurance penalty → higher depreciation table → same adjustments → 8% dealer margin.
+        </div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:data.insurance_expired?'var(--rdim)':'var(--sur2)',border:'1px solid '+(data.insurance_expired?'rgba(239,68,68,0.3)':'var(--bdr)'),borderRadius:'var(--r)',marginBottom:14}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:600}}>Insurance Expired / Not Available</div>
+            <div style={{fontSize:11,color:'var(--tx3)',marginTop:2}}>Activates purchase-value based pricing with higher depreciation</div>
+          </div>
+          <div style={{display:'flex',gap:7}}>
+            <button className={'ck-btn'+((!data.insurance_expired)?' good':'')} onClick={function(){set('insurance_expired',false);}}>Active</button>
+            <button className={'ck-btn'+(data.insurance_expired?' bad':'')} onClick={function(){set('insurance_expired',true);}}>Expired</button>
+          </div>
+        </div>
+        {!data.insurance_expired && (
+          <div className="fg" style={{marginBottom:14}}>
+            <div className="field" style={{marginBottom:0}}>
+              <label>OD Valid Until</label>
+              <input type="date" value={data.insurance_valid_od} onChange={function(e){set('insurance_valid_od',e.target.value);}} />
+            </div>
+            <div className="field" style={{marginBottom:0}}>
+              <label>TP Valid Until</label>
+              <input type="date" value={data.insurance_valid_tp} onChange={function(e){set('insurance_valid_tp',e.target.value);}} />
+            </div>
+          </div>
+        )}
+        <div className="fg">
+          {!data.insurance_expired && (
+            <div className="field"><label>IDV (₹) *</label>
+              <input type="number" value={data.idv} onChange={function(e){set('idv',e.target.value);}} placeholder="e.g. 750000" />
+            </div>
+          )}
+          {data.insurance_expired && (
+            <div className={'field'+(data.insurance_expired?' s2':'')}>
+              <label>Original Purchase Value (₹) * <span style={{color:'var(--acc)',fontSize:10}}>used instead of IDV</span></label>
+              <input type="number" value={data.purchase_value} onChange={function(e){set('purchase_value',e.target.value);}} placeholder="e.g. 900000 — price when car was bought" style={{fontFamily:'DM Mono,monospace',fontSize:16}} />
+            </div>
+          )}
+          <div className="field">
+            <label>Claim History</label>
+            <select value={data.claim_history} onChange={function(e){set('claim_history',e.target.value);}}>
+              {['None','1 Minor','1 Major','2+ Claims','Unknown'].map(function(c){return <option key={c}>{c}</option>;})}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+
+    if (step === 5) return (
+      <div className="fcard">
+        <div className="fcard-ttl">🔍 Condition Assessment</div>
+        <div className="fcard-sub">Rate each component — used in price algorithm</div>
+        {[{lbl:'Engine Condition',k:'engine',opts:['Excellent','Good','Fair','Poor']},{lbl:'Tyres',k:'tyres',opts:['Excellent','Good','Fair','Worn']},{lbl:'Battery',k:'battery',opts:['Excellent','Good','Weak','Dead']},{lbl:'Electricals',k:'electricals',opts:['Excellent','Good','Issues','Dead']}].map(function(c) {
+          return (
+            <div key={c.k} className="ck-item">
+              <span className="ck-lbl">{c.lbl}</span>
+              <div className="ck-btns">
+                {c.opts.map(function(o) {
+                  var cls = data[c.k]===o ? (o==='Excellent'||o==='Good'?'good':o==='Fair'||o==='Weak'?'warn':'bad') : '';
+                  return <button key={o} className={'ck-btn '+cls} onClick={function(){set(c.k,o);}}>{o}</button>;
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {[{lbl:'Accidental History',k:'accidental'},{lbl:'Flood Damage',k:'flood'}].map(function(c) {
+          return (
+            <div key={c.k} className="ck-item">
+              <span className="ck-lbl">{c.lbl}</span>
+              <div className="ck-btns">
+                {['Yes','No','Unknown'].map(function(o) {
+                  var cls = data[c.k]===o ? (o==='No'?'good':o==='Yes'?'bad':'warn') : '';
+                  return <button key={o} className={'ck-btn '+cls} onClick={function(){set(c.k,o);}}>{o}</button>;
+                })}
+              </div>
+            </div>
+          );
+        })}
+        <div style={{marginTop:14}}>
+          <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}}>Overall Rating (1–10)</div>
+          <div className="rating">
+            {[1,2,3,4,5,6,7,8,9,10].map(function(n) {
+              return <button key={n} className={'r-btn'+(data.rating===n?' sel':'')} onClick={function(){set('rating',n);}}>{n}</button>;
+            })}
+          </div>
+        </div>
+        </div>
+
+        <div style={{marginTop:16,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'var(--r2)',padding:'16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+            <span style={{fontSize:18}}>🚔</span>
+            <div style={{fontFamily:'Syne,sans-serif',fontSize:14,fontWeight:700}}>Pending Traffic Challans</div>
+          </div>
+          <div style={{fontSize:12,color:'var(--tx3)',marginBottom:12}}>Check on Parivahan.gov.in. Full challan amount is deducted from purchase price.</div>
+          <div style={{display:'flex',gap:8,marginBottom:12}}>
+            <button className={'ck-btn '+(data.challan_verified===false?'good':'')} onClick={function(){set('challan_verified',false);set('challan_amount','');set('challan_details','');}}>No Challans</button>
+            <button className={'ck-btn '+(data.challan_verified===true?'bad':'')} onClick={function(){set('challan_verified',true);}}>Has Challans</button>
+            <button className={'ck-btn '+(data.challan_verified===null?'warn':'')} onClick={function(){set('challan_verified',null);}}>Not Checked</button>
+          </div>
+          {data.challan_verified === true && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:6}}>
+                <div className="field" style={{marginBottom:0}}>
+                  <label>Total Challan Amount (₹)</label>
+                  <input type="number" value={data.challan_amount} onChange={function(e){set('challan_amount',e.target.value);}} placeholder="e.g. 5000" style={{fontFamily:'DM Mono,monospace',fontSize:15}} />
+                  {data.challan_amount && parseInt(data.challan_amount)>0 && <div style={{fontSize:11,color:'var(--red)',marginTop:4,fontWeight:600}}>₹{parseInt(data.challan_amount).toLocaleString('en-IN')} fully deducted from price</div>}
+                </div>
+                <div className="field" style={{marginBottom:0}}>
+                  <label>Challan Details</label>
+                  <input value={data.challan_details} onChange={function(e){set('challan_details',e.target.value);}} placeholder="e.g. Speed, Red light — 2024" />
+                </div>
+              </div>
+            </div>
+          )}
+          {data.challan_verified === null && <div style={{fontSize:11,color:'var(--acc)',padding:'7px 10px',background:'var(--adim)',borderRadius:'var(--r)'}}>⚠ Not verified — challan status won't affect price</div>}
+        </div>
+      </div>
+    );
+    }
+
+    if (step === 6) {
+      var priceDiff = data.price && algo ? ((parseInt(data.price) - algo.price) / algo.price * 100) : null;
+      return (
+        <div className="fcard">
+          <div className="fcard-ttl">💰 Your Price Estimate</div>
+          <div className="fcard-sub">Enter your estimated price first — algorithm reveals after</div>
+          <div style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r2)',padding:'14px',marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--tx3)',marginBottom:8,letterSpacing:'0.07em',textTransform:'uppercase'}}>Seller's Expected Price</div>
+          <input type="number" value={data.customer_expectation} onChange={function(e){set('customer_expectation',e.target.value);}}
+            placeholder="What is the customer asking for? e.g. 1200000"
+            style={{width:'100%',fontFamily:'DM Mono,monospace',fontSize:18,padding:'11px',background:'var(--sur3)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',color:'var(--txt)',outline:'none'}} />
+          {data.customer_expectation && parseInt(data.customer_expectation) > 0 && (
+            <div style={{marginTop:6,fontSize:13,color:'var(--acc)',fontFamily:'DM Mono,monospace',fontWeight:600}}>
+              Customer expects: {fmtL(data.customer_expectation)}
+            </div>
+          )}
+          <div style={{fontSize:11,color:'var(--tx3)',marginTop:5}}>This is recorded for negotiation reference — not shared with algorithm</div>
+        </div>
+
+        <div style={{background:'var(--sur2)',border:'2px solid var(--acc)',borderRadius:'var(--r2)',padding:'18px',marginBottom:18}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--acc)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}}>Step 1 — Your Estimated Purchase Price *</div>
+            <input type="number" value={data.price} onChange={function(e){set('price',e.target.value);}}
+              placeholder="Enter your price in ₹ e.g. 450000"
+              style={{width:'100%',fontFamily:'DM Mono,monospace',fontSize:22,padding:'13px',background:'var(--sur3)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',color:'var(--txt)',outline:'none'}} />
+            {data.price && (
+              <div style={{marginTop:8,fontSize:14,fontWeight:700,color:'var(--grn)',fontFamily:'DM Mono,monospace'}}>
+                = {fmtL(data.price)}
+              </div>
+            )}
+            <div style={{marginTop:10,fontSize:11,color:'var(--tx3)',lineHeight:1.5}}>
+              💡 Enter based on your inspection and market knowledge — do not wait for algorithm.
+            </div>
+          </div>
+          {data.price && algo && (
+            <div className="algo-box">
+              <div style={{fontFamily:'Syne,sans-serif',fontSize:14,fontWeight:700,marginBottom:4}}>🧮 Algorithm Result</div>
+              <div style={{fontSize:11,color:'var(--tx3)',marginBottom:14}}>System calculated from IDV, age, condition, odometer</div>
+              {algo.steps.map(function(s,i) {
+                return (
+                  <div key={i} className="algo-row">
+                    <span className="algo-key">{s.label}</span>
+                    <span className={'algo-val '+(s.type==='result'?'algo-result':s.type==='minus'?'algo-minus':'')}>
+                      {s.type==='base' ? fmt(s.val) : s.type==='result' ? fmtL(s.val) : (s.val>=0?'+':'')+fmt(s.val)}
+                    </span>
+                  </div>
+                );
+              })}
+              <div style={{marginTop:12,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:4}}>YOUR ESTIMATE</div>
+                  <div style={{fontFamily:'Syne,sans-serif',fontSize:19,fontWeight:800,color:'var(--grn)'}}>{fmtL(data.price)}</div>
+                </div>
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:4}}>ALGORITHM</div>
+                  <div style={{fontFamily:'Syne,sans-serif',fontSize:19,fontWeight:800,color:'var(--acc)'}}>{fmtL(algo.price)}</div>
+                </div>
+              </div>
+              {priceDiff !== null && (
+                <div style={{marginTop:8,textAlign:'center',fontSize:12,fontWeight:600,color:Math.abs(priceDiff)<=5?'var(--grn)':Math.abs(priceDiff)<=15?'var(--acc)':'var(--red)'}}>
+                  {Math.abs(priceDiff) <= 5 ? '✓ Very close to algorithm' : '⚡ ' + Math.round(Math.abs(priceDiff)) + '% ' + (priceDiff > 0 ? 'above' : 'below') + ' algorithm — Incharge will review'}
+                </div>
+              )}
+            </div>
+          )}
+          {!data.price && (
+            <div style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:14,fontSize:12,color:'var(--tx3)'}}>
+              Enter your price above to see algorithm comparison
+            </div>
+          )}
+          <div style={{background:'var(--adim)',border:'1px solid rgba(245,166,35,0.2)',borderRadius:'var(--r)',padding:'10px 13px',fontSize:12,color:'var(--acc)',marginTop:8}}>
+            🔒 Your price is an estimate. Utrust Incharge sets the final approved purchase price.
+          </div>
+        </div>
+      );
+    }
+
+    if (step === 7) return (
+      <div className="fcard">
+        <div className="fcard-ttl">✅ Review & Submit</div>
+        <div className="fcard-sub">Verify before sending for Incharge approval</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+          {[['Registration',data.reg||'—'],['Seller',data.seller_name||'—'],['Vehicle',finalBrand+' '+finalModel||'—'],['Year',finalYear||data.year||'—'],['Fuel',data.fuel||'—'],['Transmission',finalTrans||data.transmission||'—'],['Odometer',data.odometer?parseInt(data.odometer).toLocaleString('en-IN')+' km':'—'],['RC Doc',data.docs.rc?data.docs.rc.name:'⚠ Not uploaded'],['Ins Doc',data.docs.insurance?data.docs.insurance.name:'⚠ Not uploaded'],['Photos',photoDone+'/8 captured'],['Cust. Expects',data.customer_expectation?fmtL(data.customer_expectation):'Not entered'],['Your Price',fmtL(data.price)]].map(function(item) {
+            var isWarn = item[1].startsWith('⚠') || (item[0]==='Photos' && photoDone < 8);
+            return (
+              <div key={item[0]} style={{padding:'9px 11px',background:'var(--sur2)',borderRadius:'var(--r)',border:'1px solid var(--bdr)'}}>
+                <div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',letterSpacing:'0.07em',textTransform:'uppercase'}}>{item[0]}</div>
+                <div style={{fontSize:12,fontWeight:600,marginTop:2,color:isWarn?'var(--red)':'var(--txt)',wordBreak:'break-word'}}>{item[1]}</div>
+              </div>
+            );
+          })}
+        </div>
+        {photoDone < 8 && <div style={{background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:'var(--r)',padding:'10px 13px',fontSize:12,color:'var(--red)',marginBottom:10}}>⚠ Only {photoDone}/8 photos. All 8 are required.</div>}
+        <div style={{background:'var(--adim)',border:'1px solid rgba(245,166,35,0.25)',borderRadius:'var(--r)',padding:12,fontSize:12,color:'var(--acc)'}}>
+          🚀 Submitting sends this to <b>Utrust Incharge</b> for review and price approval.
+        </div>
+      </div>
+    );
+
+    return null;
+  }
+
+  return (
+    <div style={{maxWidth:860}}>
+      <div className="steps">
+        {stepNames.map(function(name,i) {
+          return (
+            <div key={i} className={'step'+(i===step?' active':i<step?' done':'')} onClick={function(){if(i<step)setStep(i);}}>
+              <span className="step-n">{i < step ? '✓' : i+1}</span>
+              {name}
+            </div>
+          );
+        })}
+      </div>
+      {renderStep()}
+      <div style={{display:'flex',justifyContent:'space-between',gap:10,marginTop:8}}>
+        <button className="btn btn-ghost" onClick={function(){step===0?props.onCancel():setStep(step-1);}}>{step===0?'Cancel':'← Back'}</button>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-ghost" onClick={function(){handleSubmit(true);}}>💾 Draft</button>
+          {step < 7
+            ? <button className="btn btn-acc" onClick={function(){setStep(step+1);}}>Next →</button>
+            : <button className="btn btn-acc" style={{fontSize:15,padding:'10px 22px'}} onClick={function(){handleSubmit(false);}}>🚀 Submit for Approval</button>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── VEHICLE DETAIL ────────────────────────────────────────
+function VehicleDetail(props) {
+  var vehicle = props.vehicle; var user = props.user;
+  var [comment, setComment] = useState('');
+  var [approvedPrice, setApprovedPrice] = useState('');
+  var [modal, setModal] = useState(null);
+  if (!vehicle) return <div style={{textAlign:'center',padding:60,color:'var(--tx3)'}}>No vehicle selected</div>;
+  var pm = vehicle.photos || {};
+  var photoKeys = ['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var photoLabels = {front:'FRONT',rear:'REAR',left:'LEFT',right:'RIGHT',interior1:'INTERIOR 1',interior2:'INTERIOR 2',engine:'ENGINE',chassis:'CHASSIS'};
+  var algo = calcAlgo(vehicle.idv, vehicle.purchase_value, vehicle.year, vehicle.insurance_expired, vehicle.accidental, vehicle.claim_history, vehicle.odometer, vehicle.engine, vehicle.fuel, vehicle.challan_amount);
+  var canApprove = (user.role === 'leader' || user.role === 'admin') && (vehicle.status === 'pending' || vehicle.status === 'review');
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:18,flexWrap:'wrap'}}>
+        <button className="btn btn-ghost btn-sm" onClick={props.onBack}>← Back</button>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:'DM Mono,monospace',color:'var(--acc)',fontSize:12}}>{vehicle.reg} · {vehicle.branch}</div>
+          <div style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:800}}>{vehicle.brand} {vehicle.model} {vehicle.variant}</div>
+        </div>
+        <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
+          <StatusBadge status={vehicle.status} />
+          {canApprove && <button className="btn btn-success btn-sm" onClick={function(){setModal('approve');}}>✓ Approve</button>}
+          {canApprove && <button className="btn btn-danger btn-sm" onClick={function(){setModal('reject');}}>✗ Reject</button>}
+          <button className="btn btn-ghost btn-sm" style={{color:'var(--acc)'}} onClick={function(){generateCustomerPDF(vehicle);}}>📱 Customer PDF</button>
+          <button className="btn btn-ghost btn-sm" style={{color:'var(--blu)'}} title="Vendor report — no pricing" onClick={function(){generateVendorPDF(vehicle);}}>🏪 Vendor PDF</button>
+          <button className="btn btn-acc btn-sm" onClick={function(){generateInternalPDF(vehicle,algo);}}>📄 Internal PDF</button>
+        </div>
+      </div>
+      <div className="detail-grid">
+        <div>
+          <div className="detail-card" style={{marginBottom:14}}>
+            <div className="detail-card-ttl">🚗 Vehicle</div>
+            {[['Registration',vehicle.reg],['Seller',vehicle.seller_name||'—'],['Seller Phone',vehicle.seller_phone||'—'],['Brand',vehicle.brand],['Model',vehicle.model],['Variant',vehicle.variant||'—'],['Year',vehicle.year],['Fuel',vehicle.fuel],['Transmission',vehicle.transmission],['Odometer',(vehicle.odometer||0).toLocaleString('en-IN')+' km'],['Ownership',vehicle.ownership],['Branch',vehicle.branch],['Evaluator',vehicle.officer]].map(function(item) {
+              return <div key={item[0]} className="drow"><span className="dkey">{item[0]}</span><span className="dval">{item[1]||'—'}</span></div>;
+            })}
+          </div>
+          <div className="detail-card" style={{marginBottom:14}}>
+            <div className="detail-card-ttl">🛡 Insurance</div>
+            {[['IDV',fmtL(vehicle.idv)],['OD Valid',vehicle.insurance_valid_od||'—'],['TP Valid',vehicle.insurance_valid_tp||'—'],['Claim History',vehicle.claim_history||'—'],['Ins. Expired',vehicle.insurance_expired?'Yes':'No']].map(function(item) {
+              return <div key={item[0]} className="drow"><span className="dkey">{item[0]}</span><span className="dval">{item[1]}</span></div>;
+            })}
+          </div>
+          <div className="detail-card">
+            <div className="detail-card-ttl">💰 Price</div>
+            <div style={{padding:'12px 0',textAlign:'center'}}>
+              {vehicle.customer_expectation > 0 && (
+                <div style={{marginBottom:10,padding:'7px 12px',background:'var(--sur2)',borderRadius:'var(--r)',border:'1px solid var(--bdr)'}}>
+                  <div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:2}}>SELLER EXPECTS</div>
+                  <div style={{fontFamily:'Syne,sans-serif',fontSize:16,fontWeight:700,color:'var(--pur)'}}>{fmtL(vehicle.customer_expectation)}</div>
+                </div>
+              )}
+              <div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:3}}>EVALUATOR ESTIMATE</div>
+              <div style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:800,color:'var(--acc)'}}>{fmtL(vehicle.price)}</div>
+              {vehicle.algo_price > 0 && <div style={{fontSize:11,color:'var(--tx3)',marginTop:3}}>Algorithm: <b style={{color:'var(--tx2)'}}>{fmtL(vehicle.algo_price)}</b></div>}
+              {vehicle.approved_price > 0 && (
+                <div style={{marginTop:10,paddingTop:10,borderTop:'1px solid var(--bdr)'}}>
+                  <div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:3}}>INCHARGE APPROVED</div>
+                  <div style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:800,color:'var(--grn)'}}>{fmtL(vehicle.approved_price)}</div>
+                </div>
+              )}
+            </div>
+            {(user.role === 'leader' || user.role === 'admin') && vehicle.status === 'approved' && (
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:10,color:'var(--tx3)',marginBottom:5,fontFamily:'DM Mono,monospace',letterSpacing:'0.06em',textTransform:'uppercase'}}>Update Approved Price</div>
+                <div style={{display:'flex',gap:6}}>
+                  <input type="number" placeholder="New price..." style={{flex:1,background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontFamily:'DM Mono,monospace',fontSize:13,outline:'none'}} onChange={function(e){setApprovedPrice(e.target.value);}} />
+                  <button className="btn btn-success btn-sm" onClick={function(){props.onUpdatePrice(vehicle.id,parseInt(approvedPrice));}}>Set</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="detail-card" style={{marginBottom:14}}>
+            <div className="detail-card-ttl">📷 Photos <span style={{fontSize:10,color:'var(--tx3)',fontWeight:400}}>(tap to enlarge)</span></div>
+            <div className="photo-grid">
+              {photoKeys.map(function(k) {
+                var src = pm[k];
+                return (
+                  <div key={k}>
+                    <div className="photo-thumb" onClick={function() {
+                      if (src) {
+                        var w = window.open('','_blank');
+                        w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+src+'" style="max-width:100%;max-height:100vh;object-fit:contain"/></body></html>');
+                        w.document.close();
+                      }
+                    }}>
+                      {src ? <img src={src} alt={k} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <span style={{fontSize:16,opacity:0.3}}>📷</span>}
+                    </div>
+                    <div className="photo-lbl" style={{color:src?'var(--grn)':'var(--tx3)'}}>{photoLabels[k]}{src?' ✓':''}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="detail-card" style={{marginBottom:14}}>
+            <div className="detail-card-ttl">🔍 Condition</div>
+            {[['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood],['Rating',vehicle.rating+'/10'],['Challans',vehicle.challan_verified?(vehicle.challan_amount>0?'⚠ ₹'+Number(vehicle.challan_amount).toLocaleString('en-IN'):'Has Challans'):'No Challans']].map(function(item) {
+              var bad = item[1]==='Worn'||item[1]==='Dead'||item[1]==='Issues'||item[1]==='Yes'||item[1]==='Poor';
+              var good = item[1]==='Excellent'||item[1]==='Good'||item[1]==='No';
+              return <div key={item[0]} className="drow"><span className="dkey">{item[0]}</span><span className="dval" style={{color:bad?'var(--red)':good?'var(--grn)':'var(--acc)'}}>{item[1]||'—'}</span></div>;
+            })}
+            {vehicle.remarks && <div style={{marginTop:8,padding:'8px 10px',background:'var(--sur2)',borderRadius:'var(--r)',fontSize:12,color:'var(--tx2)',fontStyle:'italic'}}>"{vehicle.remarks}"</div>}
+          </div>
+          <div className="detail-card">
+            <div className="detail-card-ttl">📋 Documents</div>
+            {[['RC',vehicle.docs&&vehicle.docs.rc],['Insurance',vehicle.docs&&vehicle.docs.insurance],['PUC',vehicle.docs&&vehicle.docs.pollution],['Other',vehicle.docs&&vehicle.docs.extra]].map(function(item) {
+              return <div key={item[0]} className="drow"><span className="dkey">{item[0]}</span><span className="dval" style={{color:item[1]?'var(--grn)':'var(--tx3)',fontSize:11}}>{item[1]?('✓ '+item[1].name):'Not uploaded'}</span></div>;
+            })}
+          </div>
+        </div>
+      </div>
+      {modal && (
+        <Modal title={modal==='approve'?'Approve Vehicle':'Reject Vehicle'} sub={vehicle.brand+' '+vehicle.model+' — '+vehicle.reg} onClose={function(){setModal(null);}}>
+          {modal === 'approve' && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)'}}>
+                <div style={{textAlign:'center'}}><div style={{fontSize:10,color:'var(--tx3)',marginBottom:3,fontFamily:'DM Mono,monospace'}}>EVALUATOR QUOTE</div><div style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:800,color:'var(--acc)'}}>{fmtL(vehicle.price)}</div></div>
+                <div style={{textAlign:'center'}}><div style={{fontSize:10,color:'var(--tx3)',marginBottom:3,fontFamily:'DM Mono,monospace'}}>ALGORITHM</div><div style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:800,color:'var(--tx2)'}}>{algo?fmtL(algo.price):'—'}</div></div>
+              </div>
+              <div className="field"><label>Final Approved Price (₹) *</label>
+                <input type="number" value={approvedPrice} onChange={function(e){setApprovedPrice(e.target.value);}} placeholder={'Evaluator quoted: '+vehicle.price} style={{fontFamily:'DM Mono,monospace',fontSize:18}} />
+                {approvedPrice && <div style={{fontSize:11,color:'var(--grn)',marginTop:4}}>= {fmtL(approvedPrice)}</div>}
+              </div>
+            </div>
+          )}
+          <div className="field"><label>Comments</label>
+            <textarea rows={2} value={comment} onChange={function(e){setComment(e.target.value);}} placeholder={modal==='approve'?'Notes...':'Reason for rejection...'} style={{resize:'vertical'}} />
+          </div>
+          <div className="modal-acts">
+            <button className="btn btn-ghost" onClick={function(){setModal(null);}}>Cancel</button>
+            <button className={'btn '+(modal==='approve'?'btn-success':'btn-danger')} onClick={function() {
+              if (modal === 'approve') props.onApprove(vehicle.id, comment, parseInt(approvedPrice)||vehicle.price);
+              else props.onReject(vehicle.id, comment);
+              setModal(null); setComment(''); setApprovedPrice('');
+            }}>{modal==='approve'?'✓ Approve':'✗ Reject'}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── APPROVALS ─────────────────────────────────────────────
+function Approvals(props) {
+  var vehicles = props.vehicles;
+  var pending = vehicles.filter(function(v){return v.status==='pending'||v.status==='review';});
+  var [comment, setComment] = useState('');
+  var [price, setPrice] = useState('');
+  var [active, setActive] = useState(null);
+  var [action, setAction] = useState(null);
+  return (
+    <div>
+      <div style={{marginBottom:14,color:'var(--tx3)',fontSize:13}}>{pending.length} inspection{pending.length!==1?'s':''} pending review</div>
+      {pending.length === 0 && (
+        <div style={{textAlign:'center',padding:60,color:'var(--tx3)'}}>
+          <div style={{fontSize:44,marginBottom:14}}>✅</div>
+          <div style={{fontFamily:'Syne,sans-serif',fontSize:17,fontWeight:700,color:'var(--tx2)'}}>All caught up!</div>
+        </div>
+      )}
+      {pending.map(function(v) {
+        var algoR = calcAlgo(v.idv,v.purchase_value,v.year,v.insurance_expired,v.accidental,v.claim_history,v.odometer,v.engine,v.fuel,v.challan_amount);
+        return (
+          <div key={v.id} className="appr-card">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontFamily:'DM Mono,monospace',color:'var(--acc)',fontSize:12,marginBottom:3}}>{v.reg} · {v.branch}</div>
+                <div style={{fontFamily:'Syne,sans-serif',fontSize:15,fontWeight:700,marginBottom:7}}>{v.brand} {v.model} {v.variant} <span style={{color:'var(--tx3)',fontWeight:400,fontSize:13}}>{v.year}</span></div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+                  {[v.fuel,v.transmission,(v.odometer||0).toLocaleString('en-IN')+' km',v.ownership+' Owner','★ '+v.rating+'/10'].map(function(t,i){return <span key={i} style={{padding:'2px 7px',borderRadius:4,background:'var(--sur2)',border:'1px solid var(--bdr)',fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace'}}>{t}</span>;})}
+                  {v.accidental === 'Yes' && <span style={{padding:'2px 7px',borderRadius:4,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',fontSize:10,color:'var(--red)',fontFamily:'DM Mono,monospace'}}>⚠ Accidental</span>}
+                  {v.challan_verified && v.challan_amount > 0 && <span style={{padding:'2px 7px',borderRadius:4,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',fontSize:10,color:'var(--red)',fontFamily:'DM Mono,monospace'}}>🚔 Challan ₹{Number(v.challan_amount).toLocaleString('en-IN')}</span>}
+                </div>
+                <div style={{display:'flex',gap:16,alignItems:'baseline'}}>
+                  <div><div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:2}}>EVALUATOR</div><div style={{fontFamily:'Syne,sans-serif',fontSize:17,fontWeight:800,color:'var(--grn)'}}>{fmtL(v.price)}</div></div>
+                  {algoR && <div><div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',marginBottom:2}}>ALGORITHM</div><div style={{fontFamily:'Syne,sans-serif',fontSize:15,fontWeight:700,color:'var(--acc)'}}>{fmtL(algoR.price)}</div></div>}
+                </div>
+                <div style={{fontSize:10,color:'var(--tx3)',marginTop:5}}>Submitted by {v.officer} on {v.submitted}</div>
+                {v.seller_name && <div style={{fontSize:11,color:'var(--tx2)',marginTop:2}}>Seller: <b>{v.seller_name}</b>{v.customer_expectation>0?' · Expects: '+fmtL(v.customer_expectation):''}</div>}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                <button className="btn btn-ghost btn-sm" onClick={function(){props.setSelectedVehicle(v);props.setPage('detail');}}>👁 Details</button>
+                <button className="btn btn-success btn-sm" onClick={function(){setActive(v);setAction('approve');}}>✓ Approve</button>
+                <button className="btn btn-danger btn-sm" onClick={function(){setActive(v);setAction('reject');}}>✗ Reject</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {active && (
+        <Modal title={action==='approve'?'Approve & Set Price':'Reject Inspection'} sub={active.brand+' '+active.model+' — '+active.reg} onClose={function(){setActive(null);}}>
+          {action === 'approve' && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)',marginBottom:14}}>
+                <div style={{textAlign:'center'}}><div style={{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'DM Mono,monospace'}}>EVALUATOR</div><div style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:800,color:'var(--acc)'}}>{fmtL(active.price)}</div></div>
+                <div style={{textAlign:'center'}}><div style={{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'DM Mono,monospace'}}>ALGORITHM</div><div style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:800,color:'var(--tx2)'}}>{active.algo_price?fmtL(active.algo_price):'—'}</div></div>
+              </div>
+              <div className="field"><label>Final Approved Price (₹) *</label>
+                <input type="number" value={price} onChange={function(e){setPrice(e.target.value);}} placeholder={'e.g. '+active.price} style={{fontFamily:'DM Mono,monospace',fontSize:18}} />
+                {price && <div style={{fontSize:11,color:'var(--grn)',marginTop:4}}>= {fmtL(price)}</div>}
+              </div>
+            </div>
+          )}
+          <div className="field"><label>Comments</label>
+            <textarea rows={2} value={comment} onChange={function(e){setComment(e.target.value);}} placeholder={action==='approve'?'Notes...':'Reason for rejection...'} style={{resize:'vertical'}} />
+          </div>
+          <div className="modal-acts">
+            <button className="btn btn-ghost" onClick={function(){setActive(null);}}>Cancel</button>
+            <button className={'btn '+(action==='approve'?'btn-success':'btn-danger')} onClick={function() {
+              if (action === 'approve') props.onApprove(active.id, comment, parseInt(price)||active.price);
+              else props.onReject(active.id, comment);
+              setActive(null); setComment(''); setPrice('');
+            }}>{action==='approve'?'✓ Confirm':'✗ Reject'}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── MIS (standalone BarRow used here) ────────────────────
+function MIS(props) {
+  var vehicles = props.vehicles;
+  var [tab, setTab] = useState('overview');
+  var [branchF, setBranchF] = useState('all');
+  var BRANCHES = ['Purnea','Bhagalpur','Forbesganj','Kishanganj','Katihar','Banka','Khagaria','Saharsa','Supaul'];
+  var fv = branchF === 'all' ? vehicles : vehicles.filter(function(v){return v.branch===branchF;});
+  var total = fv.length;
+  var appr = fv.filter(function(v){return v.status==='approved';});
+  var rejt = fv.filter(function(v){return v.status==='rejected';});
+  var pend = fv.filter(function(v){return v.status==='pending'||v.status==='review';});
+
+  var withAll = appr.filter(function(v){return v.price>0&&v.algo_price>0&&v.approved_price>0;});
+  var avgEval = withAll.length ? withAll.reduce(function(a,v){return a+v.price;},0)/withAll.length : 0;
+  var avgAlgo = withAll.length ? withAll.reduce(function(a,v){return a+v.algo_price;},0)/withAll.length : 0;
+  var avgAppr = withAll.length ? withAll.reduce(function(a,v){return a+v.approved_price;},0)/withAll.length : 0;
+
+  var evalMap = {};
+  fv.forEach(function(v) {
+    if (!v.officer) return;
+    if (!evalMap[v.officer]) evalMap[v.officer] = {name:v.officer,branch:v.branch,total:0,appr:0,rejt:0,evalSum:0,algoSum:0,cnt:0};
+    var e = evalMap[v.officer];
+    e.total++;
+    if (v.status==='approved') e.appr++;
+    if (v.status==='rejected') e.rejt++;
+    if (v.price>0&&v.algo_price>0){e.evalSum+=v.price;e.algoSum+=v.algo_price;e.cnt++;}
+  });
+  var evalList = Object.values(evalMap).sort(function(a,b){return b.total-a.total;});
+
+  var branchStats = BRANCHES.map(function(b) {
+    var bv = vehicles.filter(function(v){return v.branch===b;});
+    return {branch:b,total:bv.length,appr:bv.filter(function(v){return v.status==='approved';}).length,rejt:bv.filter(function(v){return v.status==='rejected';}).length};
+  }).filter(function(b){return b.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var maxB = branchStats.reduce(function(m,b){return Math.max(m,b.total);},1);
+
+  return (
+    <div>
+      <div style={{display:'flex',gap:10,marginBottom:18,flexWrap:'wrap',alignItems:'center'}}>
+        <div style={{fontFamily:'Syne,sans-serif',fontSize:16,fontWeight:700,flex:1}}>MIS Dashboard</div>
+        <select style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontSize:13,outline:'none'}} value={branchF} onChange={function(e){setBranchF(e.target.value);}}>
+          <option value="all">All Branches</option>
+          {BRANCHES.map(function(b){return <option key={b}>{b}</option>;})}
+        </select>
+      </div>
+      <div className="tabs">
+        {[['overview','📊 Overview'],['evaluators','👥 Evaluators'],['pricing','💰 Price Analysis'],['branches','🗺 Branches']].map(function(t) {
+          return <div key={t[0]} className={'tab'+(tab===t[0]?' active':'')} onClick={function(){setTab(t[0]);}}>{t[1]}</div>;
+        })}
+      </div>
+
+      {tab === 'overview' && (
+        <div>
+          <div className="sg" style={{marginBottom:20}}>
+            {[{l:'Total',v:total,i:'🚗'},{l:'Approved',v:appr.length,i:'✅',s:total?Math.round(appr.length/total*100)+'%':'-'},{l:'Rejected',v:rejt.length,i:'❌',s:total?Math.round(rejt.length/total*100)+'%':'-'},{l:'Pending',v:pend.length,i:'⏳'}].map(function(s,i) {
+              return <div key={i} className="sc"><div className="sc-lbl">{s.l}</div><div className="sc-val">{s.v}</div>{s.s&&<div className="sc-sub">{s.s}</div>}<div className="sc-ico">{s.i}</div></div>;
+            })}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            <div className="card" style={{padding:18}}>
+              <div style={{fontFamily:'Syne,sans-serif',fontSize:14,fontWeight:700,marginBottom:16}}>Branch Activity</div>
+              <div className="bar-chart">
+                {branchStats.map(function(b) { return <BarRow key={b.branch} label={b.branch} val={b.total} max={maxB} sub={b.appr+' approved'}  wide={true} />; })}
+              </div>
+            </div>
+            <div className="card" style={{padding:18}}>
+              <div style={{fontFamily:'Syne,sans-serif',fontSize:14,fontWeight:700,marginBottom:16}}>Status Split</div>
+              <div className="bar-chart">
+                {[{l:'Approved',v:appr.length,c:'var(--grn)'},{l:'Rejected',v:rejt.length,c:'var(--red)'},{l:'Pending',v:fv.filter(function(v){return v.status==='pending';}).length,c:'var(--acc)'},{l:'Draft',v:fv.filter(function(v){return v.status==='draft';}).length,c:'var(--tx3)'}].map(function(b) {
+                  return <BarRow key={b.l} label={b.l} val={b.v} max={total||1} color={b.c} />;
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'evaluators' && (
+        <div>
+          <div className="card" style={{overflowX:'auto'}}>
+            <table className="mis-table">
+              <thead>
+                <tr><th>Evaluator</th><th>Branch</th><th>Total</th><th>Approved</th><th>Rejected</th><th>Rate</th><th>Price Trend</th></tr>
+              </thead>
+              <tbody>
+                {evalList.length === 0 && <tr><td colSpan={7} style={{textAlign:'center',padding:36,color:'var(--tx3)'}}>No data yet</td></tr>}
+                {evalList.map(function(e) {
+                  var rate = e.total ? Math.round(e.appr/e.total*100) : 0;
+                  var avgEP = e.cnt ? e.evalSum/e.cnt : 0;
+                  var avgAP = e.cnt ? e.algoSum/e.cnt : 0;
+                  var trend = avgEP && avgAP ? ((avgEP-avgAP)/avgAP*100) : null;
+                  return (
+                    <tr key={e.name}>
+                      <td style={{fontWeight:600}}>{e.name}</td>
+                      <td><span className="btag">{e.branch}</span></td>
+                      <td style={{fontFamily:'DM Mono,monospace',fontWeight:700,textAlign:'center'}}>{e.total}</td>
+                      <td style={{color:'var(--grn)',fontFamily:'DM Mono,monospace',fontWeight:700,textAlign:'center'}}>{e.appr}</td>
+                      <td style={{color:'var(--red)',fontFamily:'DM Mono,monospace',fontWeight:700,textAlign:'center'}}>{e.rejt}</td>
+                      <td style={{textAlign:'center',fontWeight:700,color:rate>=70?'var(--grn)':rate>=50?'var(--acc)':'var(--red)'}}>{rate}%</td>
+                      <td style={{textAlign:'center',fontSize:11,fontWeight:600,color:trend===null?'var(--tx3)':Math.abs(trend)<=5?'var(--grn)':Math.abs(trend)<=15?'var(--acc)':'var(--red)'}}>
+                        {trend !== null ? ((trend>0?'▲':'▼')+Math.abs(trend).toFixed(1)+'% vs algo') : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{marginTop:10,padding:'8px 12px',background:'var(--sur2)',borderRadius:'var(--r)',fontSize:11,color:'var(--tx3)'}}>
+            ▲ = evaluator quotes higher than algorithm · ▼ = lower · Green = within ±5%
+          </div>
+        </div>
+      )}
+
+      {tab === 'pricing' && (
+        <div>
+          <div className="sg" style={{marginBottom:16}}>
+            {[{l:'Avg Evaluator',v:fmtL(avgEval),i:'🧑'},{l:'Avg Algorithm',v:fmtL(avgAlgo),i:'🧮'},{l:'Avg Approved',v:fmtL(avgAppr),i:'✅'},{l:'Records',v:withAll.length,i:'📊'}].map(function(s,i) {
+              return <div key={i} className="sc"><div className="sc-lbl">{s.l}</div><div className="sc-val" style={{fontSize:18}}>{s.v}</div><div className="sc-ico">{s.i}</div></div>;
+            })}
+          </div>
+          {withAll.length > 0 ? (
+            <div className="card" style={{overflowX:'auto'}}>
+              <table className="mis-table">
+                <thead><tr><th>Vehicle</th><th>Evaluator Price</th><th>Algorithm</th><th>Approved</th><th>Eval Variance</th></tr></thead>
+                <tbody>
+                  {withAll.slice(0,20).map(function(v) {
+                    var varPct = ((v.price - v.algo_price) / v.algo_price * 100);
+                    var varAbs = Math.abs(varPct);
+                    var varColor = varAbs <= 5 ? 'var(--grn)' : varAbs <= 15 ? 'var(--acc)' : 'var(--red)';
+                    return (
+                      <tr key={v.id}>
+                        <td><div style={{fontWeight:600}}>{v.brand} {v.model}</div><div style={{fontSize:10,color:'var(--tx3)',fontFamily:'DM Mono,monospace'}}>{v.reg} · {v.branch}</div></td>
+                        <td style={{fontFamily:'DM Mono,monospace',textAlign:'right'}}>{fmtL(v.price)}</td>
+                        <td style={{fontFamily:'DM Mono,monospace',textAlign:'right',color:'var(--tx3)'}}>{fmtL(v.algo_price)}</td>
+                        <td style={{fontFamily:'DM Mono,monospace',textAlign:'right',color:'var(--grn)',fontWeight:700}}>{fmtL(v.approved_price)}</td>
+                        <td style={{textAlign:'right',fontWeight:700,fontSize:12,color:varColor}}>{varPct>0?'+':''}{varPct.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{textAlign:'center',padding:40,color:'var(--tx3)'}}>
+              <div style={{fontSize:32,marginBottom:12}}>📊</div>
+              <div style={{fontFamily:'Syne,sans-serif',fontSize:16,fontWeight:700,color:'var(--tx2)'}}>No price data yet</div>
+              <div style={{fontSize:13,marginTop:6}}>Appears once inspections are approved with all 3 prices</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'branches' && (
+        <div>
+          {branchStats.map(function(b) {
+            var bv = vehicles.filter(function(v){return v.branch===b.branch;});
+            var avgP = b.appr > 0 ? bv.filter(function(v){return v.status==='approved';}).reduce(function(a,v){return a+v.price;},0)/b.appr : 0;
+            var rate = b.total ? Math.round(b.appr/b.total*100) : 0;
+            return (
+              <div key={b.branch} style={{background:'var(--sur)',border:'1px solid var(--bdr)',borderRadius:'var(--r2)',padding:'16px',marginBottom:12}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,marginBottom:12}}>
+                  <div>
+                    <div style={{fontFamily:'Syne,sans-serif',fontSize:15,fontWeight:700}}>📍 {b.branch}</div>
+                    <div style={{fontSize:11,color:'var(--tx3)',marginTop:2}}>{b.total} inspections</div>
+                  </div>
+                  <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+                    {[['Total',b.total,'var(--txt)'],['Approved',b.appr,'var(--grn)'],['Rejected',b.rejt,'var(--red)'],['Rate',rate+'%','var(--acc)'],['Avg',fmtL(avgP),'var(--blu)']].map(function(item) {
+                      return (
+                        <div key={item[0]} style={{textAlign:'center'}}>
+                          <div style={{fontFamily:'Syne,sans-serif',fontSize:17,fontWeight:800,color:item[2]}}>{item[1]}</div>
+                          <div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',textTransform:'uppercase',letterSpacing:'0.06em'}}>{item[0]}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{background:'var(--sur2)',borderRadius:4,overflow:'hidden',height:7,display:'flex',gap:1}}>
+                  {[['approved','var(--grn)'],['rejected','var(--red)'],['pending','var(--acc)'],['draft','var(--tx3)']].map(function(pair) {
+                    var cnt = bv.filter(function(v){return v.status===pair[0];}).length;
+                    var pct = b.total ? cnt/b.total*100 : 0;
+                    return pct > 0 ? <div key={pair[0]} style={{width:pct+'%',background:pair[1],height:'100%'}} title={pair[0]+': '+cnt} /> : null;
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {branchStats.length === 0 && <div style={{textAlign:'center',padding:40,color:'var(--tx3)'}}>No branch data available</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── EMPLOYEE DB ───────────────────────────────────────────
+function EmployeeDB(props) {
+  var vehicles = props.vehicles; var showToast = props.showToast;
+  var [users, setUsers] = useState(function(){return [...CRED_LIST];});
+  var [modal, setModal] = useState(null);
+  var [editing, setEditing] = useState(null);
+  var [showPwd, setShowPwd] = useState({});
+  var [search, setSearch] = useState('');
+  var [branchF, setBranchF] = useState('all');
+  var [form, setForm] = useState({name:'',username:'',password:'Utrust@2025',role:'officer',branch:'Purnea',email:'',phone:''});
+  var BRANCHES = ['Purnea','Bhagalpur','Forbesganj','Kishanganj','Katihar','Banka','Khagaria','Saharsa','Supaul','HQ','All Branches'];
+
+  function persist(list) { saveCreds(list); setUsers([...list]); }
+
+  function openAdd() { setForm({name:'',username:'',password:'Utrust@2025',role:'officer',branch:'Purnea',email:'',phone:''}); setEditing(null); setModal('form'); }
+  function openEdit(u) { setForm(Object.assign({},u)); setEditing(u.id); setModal('form'); }
+
+  function save() {
+    var f = form;
+    if (!f.name.trim()||!f.username.trim()||!f.password.trim()) { showToast('Name, username and password required','error'); return; }
+    var dup = users.find(function(u){return u.username===f.username.trim()&&u.id!==editing;});
+    if (dup) { showToast('Username "'+f.username+'" already exists','error'); return; }
+    var clean = Object.assign({},f,{username:f.username.trim().toLowerCase(),name:f.name.trim(),avatar:f.name.trim().split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase()});
+    var newList;
+    if (editing) { newList = users.map(function(u){return u.id===editing?Object.assign({},u,clean):u;}); showToast(clean.name+' updated','success'); }
+    else { newList = users.concat([Object.assign({},clean,{id:'U'+Date.now()})]); showToast(clean.name+' added — login: '+clean.username,'success'); }
+    persist(newList); setModal(null);
+  }
+
+  function del(id) {
+    if (id==='U001') { showToast('Cannot delete admin','error'); return; }
+    var u = users.find(function(x){return x.id===id;});
+    if (!window.confirm('Remove '+u.name+'?')) return;
+    persist(users.filter(function(x){return x.id!==id;}));
+    showToast(u.name+' removed','info');
+  }
+
+  function setF(k,v) { setForm(function(p){return Object.assign({},p,{[k]:v});}); }
+
+  var filtered = users.filter(function(u) {
+    var q = search.toLowerCase();
+    var ms = !q||u.name.toLowerCase().includes(q)||u.username.toLowerCase().includes(q)||(u.phone||'').includes(q);
+    var mb = branchF==='all'||u.branch===branchF;
+    return ms && mb;
+  });
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
+        <div style={{color:'var(--tx3)',fontSize:13}}>{users.length} employees</div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-ghost btn-sm" style={{fontSize:11}} onClick={function(){persist([...DEFAULT_CREDS]);showToast('Reset to default team','info');}}>↺ Reset</button>
+          <button className="btn btn-acc btn-sm" onClick={openAdd}>➕ Add</button>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+        <div className="search-bar" style={{flex:1,minWidth:180}}>
+          <span>🔍</span>
+          <input placeholder="Search name, username, phone..." value={search} onChange={function(e){setSearch(e.target.value);}} />
+        </div>
+        <select style={{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontSize:13,outline:'none'}} value={branchF} onChange={function(e){setBranchF(e.target.value);}}>
+          <option value="all">All Branches</option>
+          {BRANCHES.map(function(b){return <option key={b}>{b}</option>;})}
+        </select>
+      </div>
+      {['admin','leader','officer'].map(function(role) {
+        var roleUsers = filtered.filter(function(u){return u.role===role;});
+        if (!roleUsers.length) return null;
+        var roleLabel = {admin:'Admin',leader:'Utrust Incharge',officer:'Evaluator'};
+        var roleColor = {admin:'168,85,247',leader:'59,130,246',officer:'34,197,94'};
+        return (
+          <div key={role} style={{marginBottom:22}}>
+            <div style={{fontSize:10,fontWeight:700,color:'var(--tx3)',fontFamily:'DM Mono,monospace',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8,paddingBottom:6,borderBottom:'1px solid var(--bdr)'}}>{roleLabel[role]} ({roleUsers.length})</div>
+            {roleUsers.map(function(u) {
+              var uv = vehicles.filter(function(v){return v.officerId===u.id;});
+              return (
+                <div key={u.id} className="user-card">
+                  <div className={'av '+u.role} style={{width:38,height:38,fontSize:13,flexShrink:0}}>{u.avatar}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{u.name}</div>
+                    <div style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:3}}>
+                      <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--acc)'}}>{u.username}</span>
+                      {u.phone && <span style={{fontSize:11,color:'var(--tx3)'}}>📞 {u.phone}</span>}
+                      {u.branch && <span className="btag">📍 {u.branch}</span>}
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:5,marginTop:4}}>
+                      <span style={{fontSize:10,color:'var(--tx3)'}}>pwd:</span>
+                      <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:showPwd[u.id]?'var(--txt)':'var(--bdr2)'}}>
+                        {showPwd[u.id] ? u.password : '●●●●●●●●'}
+                      </span>
+                      <button style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'0 2px'}} onClick={function(){setShowPwd(function(p){var n=Object.assign({},p);n[u.id]=!n[u.id];return n;});}}>
+                        {showPwd[u.id] ? '🙈' : '👁'}
+                      </button>
+                    </div>
+                  </div>
+                  <span style={{background:'rgba('+roleColor[role]+',0.15)',color:'rgb('+roleColor[role]+')',border:'1px solid rgba('+roleColor[role]+',0.3)',fontSize:10,padding:'2px 8px',borderRadius:20,fontFamily:'DM Mono,monospace',flexShrink:0}}>{roleLabel[role].toUpperCase()}</span>
+                  {u.role === 'officer' && (
+                    <div style={{display:'flex',gap:14,flexShrink:0}}>
+                      {[['Done',uv.length],['OK',uv.filter(function(v){return v.status==='approved';}).length]].map(function(s) {
+                        return <div key={s[0]} style={{textAlign:'center'}}><div style={{fontFamily:'Syne,sans-serif',fontSize:15,fontWeight:800}}>{s[1]}</div><div style={{fontSize:9,color:'var(--tx3)',fontFamily:'DM Mono,monospace',textTransform:'uppercase'}}>{s[0]}</div></div>;
+                      })}
+                    </div>
+                  )}
+                  <div style={{display:'flex',gap:6,flexShrink:0}}>
+                    <button className="btn btn-ghost btn-sm" onClick={function(){openEdit(u);}}>✏️</button>
+                    {u.id !== 'U001' && <button className="btn btn-danger btn-sm" onClick={function(){del(u.id);}}>🗑</button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+      {modal === 'form' && (
+        <Modal title={editing?'Edit Employee':'Add Employee'} sub="Changes take effect immediately" onClose={function(){setModal(null);}}>
+          <div className="fg">
+            <div className="field s2"><label>Full Name *</label><input value={form.name} onChange={function(e){setF('name',e.target.value);}} placeholder="Employee full name" /></div>
+            <div className="field"><label>Username * <span style={{color:'var(--tx3)',fontSize:10,fontWeight:400}}>(login ID)</span></label><input value={form.username} onChange={function(e){setF('username',e.target.value.toLowerCase());}} placeholder="e.g. ravi.purnea" /></div>
+            <div className="field"><label>Password *</label><input value={form.password} onChange={function(e){setF('password',e.target.value);}} placeholder="Min 8 chars" /></div>
+            <div className="field"><label>Role</label>
+              <select value={form.role} onChange={function(e){setF('role',e.target.value);}}>
+                <option value="officer">Evaluator</option>
+                <option value="leader">Utrust Incharge</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="field"><label>Branch</label>
+              <select value={form.branch} onChange={function(e){setF('branch',e.target.value);}}>
+                {BRANCHES.map(function(b){return <option key={b}>{b}</option>;})}
+              </select>
+            </div>
+            <div className="field"><label>Phone</label><input value={form.phone} onChange={function(e){setF('phone',e.target.value);}} placeholder="10-digit number" /></div>
+            <div className="field"><label>Email</label><input value={form.email} onChange={function(e){setF('email',e.target.value);}} placeholder="email@utrust.in" /></div>
+          </div>
+          <div className="modal-acts">
+            <button className="btn btn-ghost" onClick={function(){setModal(null);}}>Cancel</button>
+            <button className="btn btn-acc" onClick={save}>{editing?'Save Changes':'Add Employee'}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── PDF GENERATORS ────────────────────────────────────────
+// ── VENDOR PDF — full details, NO pricing ────────────────
+function generateVendorPDF(vehicle) {
+  var pm = vehicle.photos || {};
+  var photoKeys = ['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels = {front:'FRONT VIEW',rear:'REAR VIEW',left:'LEFT SIDE',right:'RIGHT SIDE',interior1:'INTERIOR — DASHBOARD',interior2:'INTERIOR — REAR',engine:'ENGINE BAY',chassis:'CHASSIS / VIN'};
+
+  var photosHtml = photoKeys.map(function(k) {
+    return pm[k]
+      ? '<div><div style="aspect-ratio:4/3;border-radius:7px;overflow:hidden;border:1px solid #e0e0e0"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:4px;color:#555;font-family:monospace;letter-spacing:0.05em">'+pLabels[k]+'</div></div>'
+      : '<div><div style="aspect-ratio:4/3;background:#f5f5f5;border-radius:7px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center"><span style="font-size:28px;opacity:0.3">📷</span></div><div style="font-size:9px;text-align:center;margin-top:4px;color:#bbb;font-family:monospace">'+pLabels[k]+'</div></div>';
+  }).join('');
+
+  var condRows = [
+    ['Engine Condition',vehicle.engine],
+    ['Tyres',vehicle.tyres],
+    ['Battery',vehicle.battery],
+    ['Electricals',vehicle.electricals],
+    ['Accidental History',vehicle.accidental],
+    ['Flood Damage',vehicle.flood]
+  ].map(function(pair) {
+    var good = pair[1]==='Excellent'||pair[1]==='Good'||pair[1]==='No';
+    var bad  = pair[1]==='Yes'||pair[1]==='Poor'||pair[1]==='Worn'||pair[1]==='Dead'||pair[1]==='Issues';
+    var c = good ? '#16a34a' : bad ? '#dc2626' : '#d97706';
+    var dot = good ? '●' : bad ? '●' : '●';
+    return '<tr><td style="padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#444;width:55%">'+pair[0]+'</td><td style="padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;font-weight:700;color:'+c+'"><span style="margin-right:5px">'+dot+'</span>'+pair[1]+'</td></tr>';
+  }).join('');
+
+  var docsHtml = [['RC Certificate',vehicle.docs&&vehicle.docs.rc],['Insurance',vehicle.docs&&vehicle.docs.insurance],['PUC',vehicle.docs&&vehicle.docs.pollution]].map(function(pair) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:6px;background:'+(pair[1]?'#f0fdf4':'#fef9f0')+';border:1px solid '+(pair[1]?'#bbf7d0':'#fed7aa')+';margin-bottom:7px"><span style="font-size:16px">'+(pair[1]?'✅':'⚠️')+'</span><span style="font-size:13px;font-weight:600;color:'+(pair[1]?'#166534':'#92400e')+'">'+pair[0]+': '+(pair[1]?'Available':'Not Available')+'</span></div>';
+  }).join('');
+
+  var today = new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+
+  var w = window.open('','_blank');
+  w.document.write([
+    '<!DOCTYPE html><html><head><title>Utrust Vehicle Report — '+vehicle.reg+'</title>',
+    '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<style>',
+    '*{box-sizing:border-box;margin:0;padding:0;}',
+    'body{font-family:"Segoe UI",Arial,sans-serif;background:#fff;color:#111;font-size:14px;}',
+    '.hdr{background:#0a0b0d;padding:0;}',
+    '.hdr-top{display:flex;justify-content:space-between;align-items:center;padding:22px 36px;border-bottom:3px solid #f5a623;}',
+    '.hdr-bot{padding:18px 36px;display:flex;align-items:center;gap:24px;background:#111318;}',
+    '.logo{display:flex;align-items:center;gap:12px;}',
+    '.logo-icon{width:42px;height:42px;background:#f5a623;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}',
+    '.logo-name{font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;}',
+    '.logo-tag{font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}',
+    '.reg-badge{font-family:monospace;font-size:22px;font-weight:800;color:#f5a623;letter-spacing:0.1em;}',
+    '.ref-num{font-size:11px;color:#666;margin-top:4px;}',
+    '.doc-type{background:#f5a623;color:#000;font-size:10px;font-weight:800;padding:4px 12px;border-radius:4px;letter-spacing:0.08em;text-transform:uppercase;}',
+    '.hdr-meta{display:flex;gap:28px;align-items:center;}',
+    '.meta-item{text-align:center;}',
+    '.meta-val{font-size:13px;font-weight:700;color:#e8eaf0;}',
+    '.meta-lbl{font-size:9px;color:#666;letter-spacing:0.07em;text-transform:uppercase;font-family:monospace;margin-top:2px;}',
+    '.body{padding:30px 36px;}',
+    '.vehicle-name{font-size:30px;font-weight:900;margin-bottom:5px;letter-spacing:-0.01em;}',
+    '.vehicle-sub{color:#666;font-size:14px;margin-bottom:26px;}',
+    '.sec-ttl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#888;border-bottom:2px solid #f5a623;padding-bottom:7px;margin-bottom:14px;margin-top:26px;}',
+    '.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}',
+    '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}',
+    '.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px;}',
+    '.info-box{background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:12px 14px;}',
+    '.info-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:#888;margin-bottom:4px;font-family:monospace;}',
+    '.info-val{font-size:14px;font-weight:700;color:#111;}',
+    '.cond-table{width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;}',
+    '.cond-table th{background:#f8f9fa;padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:#666;}',
+    '.rating-bar{height:10px;background:#eee;border-radius:5px;overflow:hidden;margin-top:6px;}',
+    '.rating-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#f5a623,#22c55e);}',
+    '.no-price-banner{background:#f8f9fa;border:2px solid #e0e0e0;border-radius:12px;padding:18px 24px;margin:20px 0;text-align:center;}',
+    '.footer{background:#f8f9fa;padding:16px 36px;border-top:1px solid #eee;margin-top:28px;display:flex;justify-content:space-between;align-items:center;}',
+    '.sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:36px;}',
+    '.sig-box{border-top:2px solid #333;padding-top:10px;font-size:11px;color:#888;line-height:1.8;}',
+    '.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:80px;font-weight:900;color:rgba(245,166,35,0.06);white-space:nowrap;pointer-events:none;z-index:0;}',
+    '@media print{.no-print{display:none!important;}.watermark{position:fixed;}}',
+    '</style></head><body>',
+    '<div class="watermark">UTRUST VEHICLE REPORT</div>',
+
+    // HEADER
+    '<div class="hdr">',
+    '<div class="hdr-top">',
+    '<div class="logo"><div class="logo-icon">🚗</div><div><div class="logo-name">Utrust</div><div class="logo-tag">Vehicle Inspection Report</div></div></div>',
+    '<div style="text-align:right"><div class="doc-type">Vendor Copy — No Pricing</div><div style="font-size:11px;color:#666;margin-top:6px">Generated: '+today+'</div></div>',
+    '</div>',
+    '<div class="hdr-bot">',
+    '<div style="flex:1"><div class="reg-badge">'+vehicle.reg+'</div><div class="ref-num" style="color:#888">Inspection ID: '+vehicle.id+'</div></div>',
+    '<div class="hdr-meta">',
+    '<div class="meta-item"><div class="meta-val">'+vehicle.branch+'</div><div class="meta-lbl">Branch</div></div>',
+    '<div class="meta-item"><div class="meta-val">'+vehicle.submitted+'</div><div class="meta-lbl">Inspected On</div></div>',
+    '<div class="meta-item"><div class="meta-val">'+vehicle.officer+'</div><div class="meta-lbl">Evaluator</div></div>',
+    (vehicle.seller_name?'<div class="meta-item"><div class="meta-val">'+vehicle.seller_name+'</div><div class="meta-lbl">Seller</div></div>':''),
+    '</div></div></div>',
+
+    // BODY
+    '<div class="body">',
+    '<div class="vehicle-name">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div>',
+    '<div class="vehicle-sub">'+vehicle.year+' &nbsp;·&nbsp; '+vehicle.fuel+' &nbsp;·&nbsp; '+vehicle.transmission+' &nbsp;·&nbsp; '+vehicle.ownership+' Owner &nbsp;·&nbsp; '+Number(vehicle.odometer||0).toLocaleString('en-IN')+' km</div>',
+
+    // Vehicle Details
+    '<div class="sec-ttl">Vehicle Details</div>',
+    '<div class="grid3">',
+    '<div class="info-box"><div class="info-lbl">Registration</div><div class="info-val" style="font-family:monospace;letter-spacing:0.08em;color:#f5a623">'+vehicle.reg+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Brand</div><div class="info-val">'+vehicle.brand+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Model</div><div class="info-val">'+vehicle.model+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Variant</div><div class="info-val">'+(vehicle.variant||'—')+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Year of Manufacture</div><div class="info-val">'+vehicle.year+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Fuel Type</div><div class="info-val">'+vehicle.fuel+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Transmission</div><div class="info-val">'+vehicle.transmission+'</div></div>',
+    '<div class="info-box"><div class="info-lbl">Ownership</div><div class="info-val">'+vehicle.ownership+' Owner</div></div>',
+    '<div class="info-box"><div class="info-lbl">Odometer Reading</div><div class="info-val" style="font-family:monospace">'+Number(vehicle.odometer||0).toLocaleString('en-IN')+' km</div></div>',
+    '</div>',
+
+    // Insurance
+    '<div class="sec-ttl">Insurance Status</div>',
+    '<div class="grid3">',
+    '<div class="info-box"><div class="info-lbl">Insurance Status</div><div class="info-val" style="color:'+(vehicle.insurance_expired?'#dc2626':'#16a34a')+'">'+(vehicle.insurance_expired?'❌ Expired':'✅ Active')+'</div></div>',
+    (!vehicle.insurance_expired?'<div class="info-box"><div class="info-lbl">OD Valid Until</div><div class="info-val">'+(vehicle.insurance_valid_od||'—')+'</div></div><div class="info-box"><div class="info-lbl">TP Valid Until</div><div class="info-val">'+(vehicle.insurance_valid_tp||'—')+'</div></div>':'<div class="info-box"><div class="info-lbl">Claim History</div><div class="info-val">'+(vehicle.claim_history||'—')+'</div></div><div class="info-box"></div>'),
+    '</div>',
+
+    // Documents
+    '<div class="sec-ttl">Document Status</div>',
+    '<div style="margin-bottom:8px">'+docsHtml+'</div>',
+
+    // Photos
+    '<div class="sec-ttl">Inspection Photos ('+photoKeys.filter(function(k){return !!pm[k];}).length+'/8 captured)</div>',
+    '<div class="grid4" style="margin-bottom:8px">'+photosHtml+'</div>',
+
+    // Condition
+    '<div class="sec-ttl">Condition Assessment</div>',
+    '<div class="grid2">',
+    '<table class="cond-table"><thead><tr><th>Component</th><th>Condition</th></tr></thead><tbody>'+condRows+'</tbody></table>',
+    '<div>',
+    '<div style="padding:14px;background:#f8f9fa;border:1px solid #eee;border-radius:8px;margin-bottom:10px">',
+    '<div style="font-size:11px;color:#888;font-family:monospace;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Overall Rating</div>',
+    '<div style="font-size:32px;font-weight:900;color:#f5a623">'+vehicle.rating+'<span style="font-size:14px;color:#888;font-weight:400">/10</span></div>',
+    '<div class="rating-bar"><div class="rating-fill" style="width:'+(vehicle.rating*10)+'%"></div></div>',
+    '</div>',
+    (vehicle.remarks?'<div style="padding:12px 14px;background:#fffbf0;border-left:4px solid #f5a623;border-radius:0 8px 8px 0;font-size:13px;line-height:1.6"><b>Evaluator Remarks:</b><br/>'+vehicle.remarks+'</div>':''),
+    '</div></div>',
+
+    // No Pricing Banner
+    '<div class="no-price-banner">',
+    '<div style="font-size:28px;margin-bottom:8px">🔒</div>',
+    '<div style="font-size:15px;font-weight:700;color:#444;margin-bottom:4px">Pricing Not Disclosed</div>',
+    '<div style="font-size:12px;color:#888">This report is for vehicle condition reference only.<br/>Pricing details are managed exclusively by Prakash Toyota — Utrust Division.</div>',
+    '</div>',
+
+    // Signatures
+    '<div class="sig-grid">',
+    '<div class="sig-box">Inspected By<br/><b style="color:#111;font-size:13px">'+vehicle.officer+'</b><br/>'+vehicle.branch+' Branch<br/>'+vehicle.submitted+'</div>',
+    '<div class="sig-box">Vendor Representative<br/><br/><br/>Signature &amp; Stamp</div>',
+    '<div class="sig-box">Prakash Toyota — Utrust<br/><br/><br/>Authorised Signatory</div>',
+    '</div></div>',
+
+    // Footer
+    '<div class="footer">',
+    '<div style="font-size:11px;color:#888">Utrust Vehicle Management · Prakash Toyota · This report is valid for 7 days from date of inspection.</div>',
+    '<div style="font-size:11px;color:#888">Generated: '+today+'</div>',
+    '</div>',
+
+    // Print button
+    '<div class="no-print" style="text-align:center;padding:18px;background:#f0f0f0;border-top:1px solid #ddd">',
+    '<button onclick="window.print()" style="padding:11px 28px;background:#f5a623;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">🖨 Print / Save as PDF</button>',
+    '</div>',
+    '</body></html>'
+  ].join(''));
+  w.document.close();
+}
+
+
+function generateCustomerPDF(vehicle) {
+  var pm = vehicle.photos || {};
+  var photoKeys = ['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels = {front:'Front',rear:'Rear',left:'Left Side',right:'Right Side',interior1:'Interior 1',interior2:'Interior 2',engine:'Engine Bay',chassis:'Chassis/VIN'};
+  var photosHtml = photoKeys.filter(function(k){return pm[k];}).map(function(k) {
+    return '<div><div style="aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid #eee"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:3px;color:#888">'+pLabels[k]+'</div></div>';
+  }).join('');
+  var condHtml = [['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood]].map(function(pair) {
+    var c = (pair[1]==='Excellent'||pair[1]==='Good'||pair[1]==='No') ? '#16a34a' : (pair[1]==='Yes'||pair[1]==='Poor'||pair[1]==='Worn'||pair[1]==='Dead'||pair[1]==='Issues') ? '#dc2626' : '#d97706';
+    return '<tr><td style="padding:7px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#444">'+pair[0]+'</td><td style="padding:7px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;font-weight:600;color:'+c+'">'+pair[1]+'</td></tr>';
+  }).join('');
+  var waMsg = encodeURIComponent('Dear Customer,\n\nThank you for getting your '+vehicle.brand+' '+vehicle.model+' ('+vehicle.year+') inspected with Utrust.\n\nYour Estimated Purchase Price is \u20B9'+(vehicle.price/100000).toFixed(2)+' Lakh (subject to final approval by Utrust Incharge).\n\nWe look forward to serving you!\n\n\u2014 '+vehicle.officer+'\nUtrust Vehicle Assessment\n\uD83D\uDCCD '+vehicle.branch+' Branch');
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Utrust Report \u2014 '+vehicle.reg+'</title><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;background:#fff;color:#111;font-size:14px;}.hdr{background:#0a0b0d;color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;}.body{padding:28px 32px;}.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;}.cond-table{width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #eee;margin-bottom:24px;}.cond-table th{background:#f8f9fa;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:#666;}.price-box{background:#0a0b0d;color:#fff;padding:22px;border-radius:12px;text-align:center;margin-bottom:24px;}.wa-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin:4px;}.print-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#f5a623;color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;margin:4px;}@media print{.no-print{display:none!important;}}</style></head><body><div class="hdr"><div><div style="font-size:20px;font-weight:900">\uD83D\uDE97 Utrust</div><div style="font-size:10px;color:#888;margin-top:2px">Vehicle Assessment Report</div></div><div style="text-align:right"><div style="font-family:monospace;font-size:18px;color:#f5a623;font-weight:700">'+vehicle.reg+'</div><div style="font-size:11px;color:#888;margin-top:4px">\uD83D\uDCCD '+vehicle.branch+' \u00B7 '+vehicle.submitted+'</div></div></div><div class="body"><div style="font-size:24px;font-weight:900;margin-bottom:3px">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div><div style="color:#666;font-size:13px;margin-bottom:24px">'+vehicle.year+' \u00B7 '+vehicle.fuel+' \u00B7 '+vehicle.transmission+' \u00B7 '+(vehicle.ownership||'')+' Owner \u00B7 '+(vehicle.odometer||0).toLocaleString('en-IN')+' km</div>'+(photosHtml?'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#999;border-bottom:2px solid #f5a623;padding-bottom:6px;margin-bottom:12px">Inspection Photos</div><div class="photos">'+photosHtml+'</div>':'')+'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#999;border-bottom:2px solid #f5a623;padding-bottom:6px;margin-bottom:12px">Condition Report</div><table class="cond-table"><thead><tr><th>Component</th><th>Condition</th></tr></thead><tbody>'+condHtml+'</tbody></table><div style="text-align:center;margin-bottom:20px"><span style="font-size:13px;color:#666">Overall Rating: </span><span style="font-size:18px;font-weight:800;color:#f5a623">'+vehicle.rating+'/10</span></div>'+(vehicle.remarks?'<div style="background:#fffbf0;border-left:4px solid #f5a623;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:24px"><b>Remarks:</b> '+vehicle.remarks+'</div>':'')+'<div class="price-box"><div style="font-size:11px;color:#9aa3b8;letter-spacing:0.1em;text-transform:uppercase">Estimated Purchase Price</div><div style="font-size:34px;font-weight:900;color:#f5a623;margin:6px 0">\u20B9'+(vehicle.price/100000).toFixed(2)+' Lakh</div><div style="font-size:11px;color:#9aa3b8">Subject to final approval by Utrust Incharge</div></div><div style="border-top:2px solid #ddd;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px"><div style="font-size:11px;color:#888">Evaluated by<br/><b style="color:#111;font-size:13px">'+vehicle.officer+'</b><br/>'+vehicle.branch+' Branch</div><div style="font-size:11px;color:#888">Customer Signature<br/><br/></div></div></div><div style="background:#f8f9fa;padding:14px 32px;text-align:center;font-size:10px;color:#888;border-top:1px solid #eee">Utrust Vehicle Management \u00B7 '+new Date().toLocaleString('en-IN')+'</div><div class="no-print" style="text-align:center;padding:18px;background:#f0f0f0;border-top:1px solid #ddd"><a href="https://wa.me/?text='+waMsg+'" target="_blank" class="wa-btn">\uD83D\uDCF1 Share via WhatsApp</a><button onclick="window.print()" class="print-btn">\uD83D\uDDB8 Print / Save PDF</button></div></body></html>');
+  w.document.close();
+}
+
+function generateInternalPDF(vehicle, algo) {
+  var pm = vehicle.photos || {};
+  var photoKeys = ['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels = {front:'FRONT',rear:'REAR',left:'LEFT',right:'RIGHT',interior1:'INTERIOR 1',interior2:'INTERIOR 2',engine:'ENGINE',chassis:'CHASSIS/VIN'};
+  var photosHtml = photoKeys.map(function(k) {
+    return pm[k]
+      ? '<div><div style="aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid #e0e0e0"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:3px;color:#22c55e;font-weight:700">'+pLabels[k]+' \u2713</div></div>'
+      : '<div><div style="aspect-ratio:4/3;background:#f5f5f5;border-radius:6px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:18px">\uD83D\uDCF7</div><div style="font-size:9px;text-align:center;margin-top:3px;color:#aaa">'+pLabels[k]+'</div></div>';
+  }).join('');
+  var algoHtml = algo ? algo.steps.map(function(s) {
+    var c = s.type==='result'?'#f5a623':s.type==='minus'?'#ef4444':'#22c55e';
+    var v = s.type==='base'?'\u20B9'+Math.round(s.val).toLocaleString('en-IN'):s.type==='result'?'\u20B9'+(s.val/100000).toFixed(2)+'L':(s.val>=0?'+':'')+'\u20B9'+Math.abs(Math.round(s.val)).toLocaleString('en-IN');
+    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:11px"><span style="color:#666">'+s.label+'</span><span style="font-family:monospace;font-weight:600;color:'+c+'">'+v+'</span></div>';
+  }).join('') : '';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Utrust Internal \u2014 '+vehicle.reg+'</title><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;font-size:13px;}.hdr{background:#0a0b0d;color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;}.body{padding:28px 32px;}.sec-ttl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#888;border-bottom:2px solid #f5a623;padding-bottom:6px;margin:20px 0 12px;}.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}.price-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#0a0b0d;padding:18px;border-radius:12px;margin:18px 0;text-align:center;}.price-item .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;}.price-item .val{font-size:20px;font-weight:900;}.cond-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:12px;}@media print{button{display:none!important;}}</style></head><body><div class="hdr"><div><div style="font-size:18px;font-weight:900">\uD83D\uDE97 Utrust \u2014 INTERNAL REPORT</div><div style="font-size:10px;color:#888;margin-top:2px">Confidential \u00B7 Not for customer</div></div><div style="text-align:right"><div style="font-family:monospace;font-size:18px;color:#f5a623;font-weight:700">'+vehicle.reg+'</div><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(vehicle.status==='approved'?'#22c55e':vehicle.status==='rejected'?'#ef4444':'#f5a623')+';color:'+(vehicle.status==='approved'||vehicle.status==='rejected'?'#fff':'#000')+';margin-top:5px">'+vehicle.status.toUpperCase()+'</span></div></div><div class="body"><div style="font-size:22px;font-weight:900;margin-bottom:3px">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div><div style="color:#666;margin-bottom:4px">'+vehicle.year+' \u00B7 '+vehicle.fuel+' \u00B7 '+vehicle.transmission+' \u00B7 '+(vehicle.ownership||'')+' Owner</div><div style="font-size:12px;color:#888">Evaluator: '+vehicle.officer+' \u00B7 '+vehicle.branch+' \u00B7 Submitted: '+vehicle.submitted+'</div><div class="sec-ttl">Price Comparison</div><div class="price-row"><div class="price-item"><div class="lbl">Evaluator Estimate</div><div class="val" style="color:#f5a623">\u20B9'+(vehicle.price/100000).toFixed(2)+'L</div><div style="font-size:10px;color:#888;margin-top:3px">'+vehicle.officer+'</div></div><div class="price-item"><div class="lbl">Algorithm Suggested</div><div class="val" style="color:#9aa3b8">\u20B9'+((vehicle.algo_price||0)/100000).toFixed(2)+'L</div><div style="font-size:10px;color:#888;margin-top:3px">'+(vehicle.price&&vehicle.algo_price?((vehicle.price-vehicle.algo_price)/vehicle.algo_price*100).toFixed(1)+'% diff':'—')+'</div></div><div class="price-item"><div class="lbl">Incharge Approved</div><div class="val" style="color:'+(vehicle.approved_price?'#22c55e':'#f5a623')+'">'+((vehicle.approved_price||0)>0?'\u20B9'+(vehicle.approved_price/100000).toFixed(2)+'L':'Pending')+'</div></div></div>'+(algo?'<div class="sec-ttl">Algorithm Breakdown</div>'+algoHtml:'')+'<div class="sec-ttl">Photos</div><div class="photos">'+photosHtml+'</div><div class="sec-ttl">Condition</div>'+[['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood],['Rating',vehicle.rating+'/10'],['Challans',vehicle.challan_verified?(vehicle.challan_amount>0?'⚠ ₹'+Number(vehicle.challan_amount).toLocaleString('en-IN'):'Has Challans'):'No Challans']].map(function(p){var c=(p[1]==='Excellent'||p[1]==='Good'||p[1]==='No')?'#22c55e':(p[1]==='Yes'||p[1]==='Poor'||p[1]==='Worn'||p[1]==='Dead'||p[1]==='Issues')?'#ef4444':'#d97706';return '<div class="cond-row"><span>'+p[0]+'</span><span style="font-weight:700;color:'+c+'">'+p[1]+'</span></div>';}).join('')+(vehicle.remarks?'<div style="margin-top:10px;padding:10px;background:#fffbf0;border-left:4px solid #f5a623;border-radius:0 6px 6px 0;font-size:12px"><b>Remarks:</b> '+vehicle.remarks+'</div>':'')+'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:36px"><div style="border-top:2px solid #333;padding-top:8px;font-size:11px;color:#666">Evaluator<br/><b>'+vehicle.officer+'</b></div><div style="border-top:2px solid #333;padding-top:8px;font-size:11px;color:#666">Incharge Approval<br/><b>'+(vehicle.approved_price?'Approved':'Pending')+'</b></div><div style="border-top:2px solid #333;padding-top:8px;font-size:11px;color:#666">Dealer Stamp</div></div></div><div style="background:#f8f9fa;padding:12px 32px;text-align:center;font-size:10px;color:#888;border-top:1px solid #eee;margin-top:20px">Utrust Internal \u00B7 CONFIDENTIAL \u00B7 '+new Date().toLocaleString('en-IN')+'</div><div style="text-align:center;padding:14px"><button onclick="window.print()" style="padding:10px 24px;background:#f5a623;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">\uD83D\uDDB8 Print / Save PDF</button></div></body></html>');
+  w.document.close();
+}
+
+// ── APP ROOT ──────────────────────────────────────────────
+function App() {
+  var [user, setUser] = useState(null);
+  var [page, setPage] = useState('dash');
+  var [vehicles, setVehicles] = useState(SAMPLE_VEHICLES);
+  var [selVehicle, setSelVehicle] = useState(null);
+  var [toast, setToast] = useState(null);
+  var [fbReady, setFbReady] = useState(!!window.FB_READY);
+  var [dbLive, setDbLive] = useState(false);
+  var [saving, setSaving] = useState(false);
+
+  function showToast(msg, type) { setToast({msg:msg, type:type||'success'}); }
+
+  useEffect(function() {
+    if (window.FB_READY) { setFbReady(true); return; }
+    var h = function() { setFbReady(true); };
+    window.addEventListener('fb-ready', h);
+    return function() { window.removeEventListener('fb-ready', h); };
+  }, []);
+
+  useEffect(function() {
+    if (!fbReady) return;
+    var unsub;
+    try {
+      unsub = window.FB.fbListenVehicles(function(docs) {
+        setDbLive(true);
+        if (docs.length > 0) {
+          // Merge Firestore docs with any local-only drafts (temp IDs starting with 'V')
+          setVehicles(function(prev) {
+            var fsIds = docs.map(function(d){return d.id;});
+            // Keep local-only items (temp ID, not yet in Firestore)
+            var localOnly = prev.filter(function(v){
+              return v.id && v.id.startsWith('V') && !fsIds.includes(v.id);
+            });
+            return localOnly.concat(docs);
+          });
+        } else {
+          window.FB.fbSeedIfEmpty(SAMPLE_VEHICLES).catch(function(){});
+        }
+      });
+    } catch(e) { console.warn('Firestore unavailable', e); }
+    return function() { if (unsub) unsub(); };
+  }, [fbReady]);
+
+  var pendingCount = vehicles.filter(function(v){return v.status==='pending'||v.status==='review';}).length;
+
+  function handleApprove(id, comment, approvedPrice) {
+    var updates = {status:'approved',approved:new Date().toISOString().slice(0,10),approved_price:approvedPrice,approval_comment:comment};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,updates):v;});});
+    if (selVehicle && selVehicle.id === id) setSelVehicle(function(v){return Object.assign({},v,updates);});
+    if (fbReady && window.FB) window.FB.fbUpdateVehicle(id, updates).catch(function(){});
+    showToast('Approved & price set!','success');
+  }
+
+  function handleReject(id, comment) {
+    var updates = {status:'rejected',rejection_comment:comment};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,updates):v;});});
+    if (selVehicle && selVehicle.id === id) setSelVehicle(function(v){return Object.assign({},v,updates);});
+    if (fbReady && window.FB) window.FB.fbUpdateVehicle(id, updates).catch(function(){});
+    showToast('Inspection rejected','error');
+  }
+
+  function handleUpdatePrice(id, price) {
+    var updates = {approved_price:price};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,updates):v;});});
+    if (selVehicle && selVehicle.id === id) setSelVehicle(function(v){return Object.assign({},v,updates);});
+    if (fbReady && window.FB) window.FB.fbUpdateVehicle(id, updates).catch(function(){});
+    showToast('Price updated','success');
+  }
+
+  function handleNewVehicle(vehicle) {
+    setSaving(true);
+    showToast('Saving inspection to cloud...','info');
+    // Add optimistic entry immediately so evaluator sees it
+    setVehicles(function(vs){return [vehicle].concat(vs);});
+    setPage('vehicles');
+    if (fbReady && window.FB) {
+      window.FB.fbSaveVehicle(vehicle).then(function(newId) {
+        // Replace the temp-ID optimistic entry with the real Firestore ID
+        setVehicles(function(vs){
+          return vs.map(function(v){
+            return v.id === vehicle.id ? Object.assign({},v,{id:newId}) : v;
+          });
+        });
+        setSaving(false);
+        showToast(vehicle.status==='draft'?'✓ Draft saved!':'✓ Submitted for Incharge approval!', 'success');
+      }).catch(function(err) {
+        console.error('Firestore save error:', err.message || err);
+        setSaving(false);
+        // Check if it's a Firestore permissions error
+        var msg = err && err.message ? err.message : '';
+        if (msg.includes('permission') || msg.includes('PERMISSION_DENIED')) {
+          showToast('Firestore rules need updating — go to Firebase Console > Rules and set: allow read, write: if true;','error');
+        } else if (msg.includes('quota') || msg.includes('resource-exhausted')) {
+          showToast('Firestore quota reached. Try again later.','error');
+        } else {
+          showToast('Save failed: ' + (msg || 'Check internet connection'),'error');
+        }
+      });
+    } else {
+      setSaving(false);
+      showToast(vehicle.status==='draft'?'✓ Draft saved!':'✓ Submitted for approval!','success');
+    }
+  }
+
+  function handleDelete(id) {
+    setVehicles(function(vs){return vs.filter(function(v){return v.id!==id;});});
+    if (fbReady && window.FB) window.FB.fbDeleteVehicle(id).catch(function(){});
+    showToast('Deleted','info');
+  }
+
+  var titles = {dash:'Dashboard',vehicles:user&&user.role==='officer'?'My Inspections':'All Vehicles',add:'New Inspection',approval:'Pending Approvals',mis:'MIS Dashboard',users:'Employee Database',detail:'Vehicle Detail'};
+
+  if (!user) return <Login onLogin={function(u){setUser(u);setPage('dash');}} />;
+
+  function renderPage() {
+    if (page === 'dash') return <Dashboard vehicles={vehicles} user={user} setPage={setPage} />;
+    if (page === 'vehicles') return <VehiclesList vehicles={vehicles} user={user} setPage={setPage} setSelectedVehicle={setSelVehicle} onAddNew={function(){setPage('add');}} onDelete={handleDelete} />;
+    if (page === 'add') return <NewInspection user={user} onSubmit={handleNewVehicle} onCancel={function(){setPage('vehicles');}} showToast={showToast} />;
+    if (page === 'approval') return <Approvals vehicles={vehicles} user={user} onApprove={handleApprove} onReject={handleReject} setPage={setPage} setSelectedVehicle={setSelVehicle} />;
+    if (page === 'mis') return <MIS vehicles={vehicles} user={user} />;
+    if (page === 'users') return <EmployeeDB vehicles={vehicles} showToast={showToast} />;
+    if (page === 'detail') return <VehicleDetail vehicle={selVehicle} user={user} onBack={function(){setPage('vehicles');}} onApprove={handleApprove} onReject={handleReject} onUpdatePrice={handleUpdatePrice} />;
+    return <Dashboard vehicles={vehicles} user={user} setPage={setPage} />;
+  }
+
+  return (
+    <div style={{display:'flex',minHeight:'100vh',width:'100%',flexDirection:'inherit'}}>
+      <Sidebar user={user} page={page} setPage={setPage} onLogout={function(){setUser(null);setPage('dash');}} pendingCount={pendingCount} />
+      <div className="main">
+        <div className="topbar">
+          <div>
+            <div className="tb-title">{titles[page]||'Utrust'}</div>
+            <div className="tb-sub">Utrust Vehicle Management · {user.branch}</div>
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,fontFamily:'DM Mono,monospace',padding:'3px 8px',borderRadius:4,background:dbLive?'var(--gdim)':'var(--sur2)',border:'1px solid '+(dbLive?'rgba(34,197,94,0.3)':'var(--bdr)'),color:dbLive?'var(--grn)':'var(--tx3)'}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:dbLive?'var(--grn)':'var(--tx3)'}} />
+              {saving?'Saving...':dbLive?'Cloud Live':'Local'}
+            </div>
+            {page !== 'add' && (user.role === 'officer' || user.role === 'admin') && (
+              <button className="btn btn-acc btn-sm" onClick={function(){setPage('add');}}>➕ New</button>
+            )}
+          </div>
+        </div>
+        <div className="content">{renderPage()}</div>
+      </div>
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={function(){setToast(null);}} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
