@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Utrust — Vehicle Management</title>
+<style>
+:root{--bg:#0a0b0d;--sur:#111318;--sur2:#181c23;--sur3:#1e2330;--bdr:#252b38;--bdr2:#2e3545;--acc:#f5a623;--acc2:#e8912a;--adim:rgba(245,166,35,0.12);--grn:#22c55e;--gdim:rgba(34,197,94,0.12);--red:#ef4444;--rdim:rgba(239,68,68,0.12);--blu:#3b82f6;--bdim:rgba(59,130,246,0.12);--pur:#a855f7;--txt:#e8eaf0;--tx2:#9aa3b8;--tx3:#5a6480;--r:8px;--r2:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+#root{display:flex;min-height:100vh;}
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:var(--bg);}
+.loading-icon{width:52px;height:52px;background:var(--acc);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.loading-spinner{width:24px;height:24px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* SIDEBAR */
+.sb{width:230px;min-height:100vh;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:40;}
+.sb-logo{padding:16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;}
+.sb-icon{width:34px;height:34px;border-radius:8px;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sb-name{font-size:15px;font-weight:800;letter-spacing:-0.01em;}
+.sb-user{padding:12px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;letter-spacing:0.02em;}
+.av.admin{background:rgba(168,85,247,0.2);color:var(--pur);border:1px solid rgba(168,85,247,0.3);}
+.av.leader{background:var(--bdim);color:var(--blu);border:1px solid rgba(59,130,246,0.3);}
+.av.officer{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.3);}
+.sb-uname{font-size:12px;font-weight:600;line-height:1.2;}
+.sb-urole{font-size:10px;color:var(--tx3);font-family:monospace;}
+.sb-ubranch{font-size:10px;color:var(--acc);font-family:monospace;}
+.nav-area{flex:1;padding:8px 0;}
+.sb-sec{padding:10px 14px 4px;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:0.1em;text-transform:uppercase;font-family:monospace;}
+.nav-it{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:all 0.15s;font-size:13px;color:var(--tx2);font-weight:500;position:relative;margin:1px 8px;border-radius:var(--r);}
+.nav-it:hover{background:var(--sur2);color:var(--txt);}
+.nav-it.active{background:var(--adim);color:var(--acc);}
+.nav-it.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--acc);border-radius:0 2px 2px 0;}
+.nav-ic{width:18px;text-align:center;font-size:14px;flex-shrink:0;}
+.nav-bd{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;}
+.sb-foot{margin-top:auto;padding:14px;border-top:1px solid var(--bdr);}
+.logout-btn{width:100%;padding:8px;background:transparent;border:1px solid var(--bdr);border-radius:var(--r);color:var(--tx3);font-size:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{padding:12px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--sur);position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:8px;}
+.tb-title{font-size:16px;font-weight:800;letter-spacing:-0.01em;}
+.tb-sub{font-size:11px;color:var(--tx3);}
+.content{flex:1;padding:20px;overflow-y:auto;}
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:var(--r);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-acc{background:var(--acc);color:#000;}
+.btn-acc:hover{background:var(--acc2);}
+.btn-ghost{background:var(--sur2);color:var(--tx2);border:1px solid var(--bdr);}
+.btn-ghost:hover{color:var(--txt);border-color:var(--bdr2);}
+.btn-danger{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+.btn-danger:hover{background:rgba(239,68,68,0.2);}
+.btn-success{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.25);}
+.btn-success:hover{background:rgba(34,197,94,0.2);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-lg{padding:12px 22px;font-size:15px;font-weight:700;}
+/* FORMS */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--tx3);margin-bottom:5px;letter-spacing:0.07em;text-transform:uppercase;}
+.field input,.field select,.field textarea{width:100%;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 13px;color:var(--txt);font-size:14px;transition:border-color 0.15s;outline:none;font-family:inherit;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acc);}
+.field select option{background:var(--sur2);}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.s2{grid-column:span 2;}
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.sc{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;position:relative;overflow:hidden;}
+.sc-lbl{font-size:10px;color:var(--tx3);font-family:monospace;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:7px;}
+.sc-val{font-size:24px;font-weight:800;margin-bottom:3px;letter-spacing:-0.02em;}
+.sc-sub{font-size:11px;color:var(--grn);}
+.sc-ico{position:absolute;top:14px;right:14px;font-size:22px;opacity:0.2;}
+/* CARDS */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);overflow:hidden;}
+.card-hdr{padding:13px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.card-ttl{font-size:14px;font-weight:700;}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:0.07em;text-transform:uppercase;font-family:monospace;border-bottom:1px solid var(--bdr);background:var(--sur2);white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--bdr);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+/* BADGE */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:monospace;white-space:nowrap;}
+.b-pend{background:rgba(245,166,35,0.15);color:var(--acc);border:1px solid rgba(245,166,35,0.25);}
+.b-appr{background:var(--gdim);color:var(--grn);border:1px solid rgba(34,197,94,0.25);}
+.b-rejt{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+.b-drft{background:var(--sur3);color:var(--tx3);border:1px solid var(--bdr2);}
+/* STEPS */
+.steps{display:flex;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);overflow-x:auto;margin-bottom:20px;flex-shrink:0;}
+.step{flex:0 0 auto;padding:10px 8px;text-align:center;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:0.04em;text-transform:uppercase;border-right:1px solid var(--bdr);cursor:pointer;transition:all 0.15s;min-width:64px;}
+.step:last-child{border-right:none;}
+.step.active{background:var(--adim);color:var(--acc);}
+.step.done{background:var(--gdim);color:var(--grn);}
+.step-n{display:block;font-size:15px;font-weight:800;margin-bottom:1px;}
+.fcard{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:20px;margin-bottom:14px;}
+.fcard-ttl{font-size:14px;font-weight:700;margin-bottom:3px;}
+.fcard-sub{font-size:12px;color:var(--tx3);margin-bottom:16px;}
+/* CAMERA */
+.cam-slot{background:var(--sur2);border:2px dashed var(--bdr2);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:all 0.2s;}
+.cam-slot:hover{border-color:var(--acc);}
+.cam-slot.captured{border-style:solid;border-color:var(--grn);}
+.cam-preview{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;}
+.cam-lbl{font-size:10px;text-align:center;padding:6px;color:var(--tx3);font-family:monospace;background:var(--sur2);}
+.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cam-modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px;}
+.shutter{width:64px;height:64px;border-radius:50%;background:var(--acc);border:4px solid rgba(255,255,255,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+/* CHECKLIST */
+.ck-item{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--sur2);border-radius:var(--r);border:1px solid var(--bdr);margin-bottom:8px;flex-wrap:wrap;gap:8px;}
+.ck-lbl{font-size:13px;font-weight:500;}
+.ck-btns{display:flex;gap:5px;flex-wrap:wrap;}
+.ck-btn{padding:4px 10px;border-radius:4px;border:1px solid var(--bdr);background:transparent;font-size:11px;font-weight:600;cursor:pointer;font-family:monospace;transition:all 0.12s;color:var(--tx3);}
+.ck-btn.good{border-color:var(--grn);color:var(--grn);background:var(--gdim);}
+.ck-btn.warn{border-color:var(--acc);color:var(--acc);background:var(--adim);}
+.ck-btn.bad{border-color:var(--red);color:var(--red);background:var(--rdim);}
+/* RATING */
+.rating{display:flex;gap:5px;flex-wrap:wrap;}
+.r-btn{width:36px;height:36px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--sur2);color:var(--tx3);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.12s;}
+.r-btn:hover{border-color:var(--acc);color:var(--acc);}
+.r-btn.sel{background:var(--acc);border-color:var(--acc);color:#000;}
+/* ALGO */
+.algo-box{background:var(--sur3);border:1px solid var(--bdr2);border-radius:var(--r2);padding:18px;margin-bottom:14px;}
+.algo-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px;}
+.algo-row:last-child{border-bottom:none;}
+.algo-key{color:var(--tx3);flex:1;padding-right:10px;}
+.algo-val{font-family:monospace;font-weight:600;text-align:right;}
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px);}
+.modal{background:var(--sur);border:1px solid var(--bdr2);border-radius:16px;padding:24px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 40px 80px rgba(0,0,0,0.5);}
+.modal-ttl{font-size:18px;font-weight:700;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--tx3);margin-bottom:18px;}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+/* UPLOAD */
+.upzone{border:2px dashed var(--bdr2);border-radius:var(--r2);padding:20px 14px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--sur2);}
+.upzone:hover{border-color:var(--acc);}
+.upzone.done{border-style:solid;border-color:var(--grn);background:var(--gdim);}
+/* SEARCH */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:8px 12px;}
+.search-bar input{background:none;border:none;outline:none;color:var(--txt);font-size:13px;min-width:0;flex:1;font-family:inherit;}
+/* TOAST */
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--sur);border:1px solid var(--bdr2);border-radius:var(--r2);padding:12px 18px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 16px 40px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;white-space:nowrap;max-width:calc(100vw - 28px);animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(16px);opacity:0;}to{transform:translateX(-50%) translateY(0);opacity:1;}}
+.toast.success{border-left:3px solid var(--grn);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--acc);}
+/* LOGIN */
+.login-screen{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:16px;}
+.login-card{background:var(--sur);border:1px solid var(--bdr2);border-radius:16px;padding:36px 28px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.6);}
+.login-logo{display:flex;align-items:center;gap:13px;margin-bottom:24px;}
+.login-logo-icon{width:46px;height:46px;border-radius:11px;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.btn-primary{width:100%;padding:13px;background:var(--acc);color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;transition:all 0.15s;letter-spacing:0.01em;}
+.btn-primary:hover{background:var(--acc2);}
+/* DETAIL */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.detail-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;}
+.detail-card-ttl{font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bdr);}
+.drow{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px;gap:8px;}
+.drow:last-child{border-bottom:none;}
+.dkey{color:var(--tx3);flex-shrink:0;}
+.dval{font-weight:600;text-align:right;word-break:break-word;}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.photo-thumb{aspect-ratio:4/3;background:var(--sur2);border-radius:6px;border:1px solid var(--bdr);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.photo-thumb:hover{border-color:var(--acc);}
+/* TABS */
+.tabs{display:flex;gap:3px;background:var(--sur2);padding:4px;border-radius:var(--r2);margin-bottom:18px;border:1px solid var(--bdr);overflow-x:auto;}
+.tab{flex:1;padding:7px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--tx3);cursor:pointer;border-radius:var(--r);transition:all 0.15s;white-space:nowrap;min-width:80px;}
+.tab.active{background:var(--sur);color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+/* BAR CHART */
+.bar-chart{display:flex;flex-direction:column;gap:10px;}
+.bar-row{display:flex;align-items:center;gap:10px;}
+.bar-lbl{font-size:11px;color:var(--tx2);text-align:right;flex-shrink:0;width:90px;}
+.bar-track{flex:1;height:8px;background:var(--sur2);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--acc);transition:width 0.4s;}
+.bar-val{width:36px;font-size:11px;color:var(--tx3);font-family:monospace;}
+/* USER CARD */
+.user-card{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r2);margin-bottom:10px;flex-wrap:wrap;}
+.btag{display:inline-block;font-size:9px;font-family:monospace;color:var(--acc);background:var(--adim);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,166,35,0.2);}
+/* STATUS indicator */
+.db-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+/* MOBILE */
+@media(max-width:768px){
+  #root{flex-direction:column;}
+  .sb{width:100%;min-height:auto;height:auto;flex-direction:row;align-items:center;position:sticky;top:0;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--bdr);}
+  .sb-logo{padding:10px 12px;border-bottom:none;border-right:1px solid var(--bdr);flex-shrink:0;}
+  .sb-user{padding:8px 10px;border-bottom:none;border-right:1px solid var(--bdr);flex-shrink:0;}
+  .sb-uname{font-size:11px;} .sb-urole,.sb-ubranch{display:none;}
+  .sb-sec{display:none;}
+  .nav-area{display:flex;flex:1;overflow-x:auto;align-items:center;padding:0 4px;}
+  .nav-it{flex-direction:column;padding:6px 9px;margin:3px 2px;min-width:50px;gap:2px;flex-shrink:0;}
+  .nav-txt{font-size:9px;}
+  .nav-ic{font-size:16px;width:auto;}
+  .sb-foot{margin-top:0;padding:8px 10px;border-top:none;border-left:1px solid var(--bdr);margin-left:auto;flex-shrink:0;}
+  .main{min-height:0;}
+  .content{padding:12px;}
+  .sg{grid-template-columns:1fr 1fr;}
+  .sc{padding:12px;} .sc-val{font-size:20px;}
+  .fg{grid-template-columns:1fr!important;}
+  .s2{grid-column:span 1!important;}
+  .fcard{padding:14px;}
+  .detail-grid{grid-template-columns:1fr;}
+  .photo-grid{grid-template-columns:repeat(3,1fr);}
+  .cam-grid{grid-template-columns:1fr 1fr;}
+  .modal{padding:18px;}
+  .topbar{padding:10px 12px;}
+}
+@media(max-width:400px){
+  .sg{grid-template-columns:1fr;}
+  .nav-txt{display:none;}
+  .nav-it{min-width:40px;}
+}
+@media(min-width:769px) and (max-width:1100px){
+  .sb{width:56px;}
+  .sb-name,.sb-uname,.sb-urole,.sb-ubranch,.sb-sec,.nav-txt,.nav-bd{display:none;}
+  .nav-it{justify-content:center;padding:10px;}
+  .sb-user{justify-content:center;}
+  .sg{grid-template-columns:1fr 1fr;}
+  .detail-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="loading-screen">
+    <div class="loading-icon">🚗</div>
+    <div style="font-size:20px;font-weight:800;color:#e8eaf0">Utrust</div>
+    <div class="loading-spinner"></div>
+    <div style="font-size:11px;color:#5a6480;font-family:monospace">Loading application...</div>
+  </div>
+</div>
+
+<!-- React 18 - served locally, no CDN dependency -->
+<script src="/js/react.min.js"></script>
+<script src="/js/react-dom.min.js"></script>
+
+<!-- Firebase - served locally, no CDN dependency -->
+<script src="/js/firebase-app.js"></script>
+<script src="/js/firebase-firestore.js"></script>
+
+<script>
+// ── FIREBASE ─────────────────────────────────────────────
+var fbDb = null;
+try {
+  firebase.initializeApp({
+    apiKey:"AIzaSyDazZSs72-ObVlMWcfCryKh7hwTtUmQ_LA",
+    authDomain:"utrust-app.firebaseapp.com",
+    projectId:"utrust-app"
+  });
+  fbDb = firebase.firestore();
+} catch(e) { console.warn("Firebase:",e.message); }
+
+function compressImg(url, maxW, q) {
+  return new Promise(function(res){
+    if (!url||!url.startsWith('data:')){res(url);return;}
+    var img=new Image(); img.onload=function(){
+      var sc=Math.min(1,(maxW||640)/img.width);
+      var c=document.createElement('canvas');
+      c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg',q||0.4));
+    }; img.onerror=function(){res(url);}; img.src=url;
+  });
+}
+function compressPhotos(photos) {
+  var keys=Object.keys(photos||{}); var out={}; var chain=Promise.resolve();
+  keys.forEach(function(k){
+    chain=chain.then(function(){return photos[k]?compressImg(photos[k]):Promise.resolve(null);}).then(function(v){out[k]=v;});
+  });
+  return chain.then(function(){return out;});
+}
+
+var FB = {
+  listen: function(cb) {
+    if (!fbDb) return function(){};
+    return fbDb.collection('vehicles').orderBy('createdAt','desc').onSnapshot(function(snap){
+      cb(snap.docs.map(function(d){return Object.assign({},d.data(),{id:d.id});}));
+    }, function(e){console.error('FS listen:',e);});
+  },
+  save: function(v) {
+    if (!fbDb) return Promise.reject(new Error('Firestore unavailable'));
+    var doc=Object.assign({},v); delete doc.id; delete doc.photos;
+    if (doc.docs){var cd={};Object.keys(doc.docs).forEach(function(k){if(doc.docs[k])cd[k]=doc.docs[k];});doc.docs=cd;}
+    doc.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+    return compressPhotos(v.photos||{}).then(function(cp){
+      var fp={};Object.keys(cp).forEach(function(k){if(cp[k])fp[k]=cp[k];});
+      doc.photos=fp;
+      return fbDb.collection('vehicles').add(doc).then(function(ref){
+        return ref.update({id:ref.id}).then(function(){return ref.id;});
+      });
+    });
+  },
+  update: function(id,u) {
+    if (!fbDb) return Promise.reject(new Error('Firestore unavailable'));
+    if (u.photos) {
+      return compressPhotos(u.photos).then(function(cp){
+        return fbDb.collection('vehicles').doc(id).update(Object.assign({},u,{photos:cp}));
+      });
+    }
+    return fbDb.collection('vehicles').doc(id).update(u);
+  },
+  del: function(id) {
+    if (!fbDb) return Promise.reject(new Error('Firestore unavailable'));
+    return fbDb.collection('vehicles').doc(id).delete();
+  }
+};
+
+// ── CREDENTIALS ──────────────────────────────────────────
+var DEFAULT_CREDS=[
+  {id:'U001',username:'admin',password:'Admin@1234',name:'Utrust Admin',role:'admin',email:'admin@utrust.in',avatar:'UA',branch:'HQ',phone:''},
+  {id:'U002',username:'dilnawaz.purnea',password:'Utrust@2025',name:'Dilnawaz Ahmad',role:'leader',email:'dilnawaz@utrust.in',avatar:'DA',branch:'Purnea',phone:'6287796605'},
+  {id:'U003',username:'sajan.purnea',password:'Utrust@2025',name:'Sajan Kr Saha',role:'officer',email:'sajan@utrust.in',avatar:'SS',branch:'Purnea',phone:'9264476721'},
+  {id:'U004',username:'ravi.purnea',password:'Utrust@2025',name:'Ravi Yadav',role:'officer',email:'ravi.y@utrust.in',avatar:'RY',branch:'Purnea',phone:'9264476725'},
+  {id:'U005',username:'khushboo.purnea',password:'Utrust@2025',name:'Khushboo',role:'officer',email:'khushboo@utrust.in',avatar:'KH',branch:'Purnea',phone:'9264476720'},
+  {id:'U006',username:'ashwani.purnea',password:'Utrust@2025',name:'Ashwani Yadav',role:'officer',email:'ashwani@utrust.in',avatar:'AY',branch:'Purnea',phone:'9264476712'},
+  {id:'U007',username:'ravikumar.purnea',password:'Utrust@2025',name:'Ravi Kumar',role:'officer',email:'ravi.k@utrust.in',avatar:'RK',branch:'Purnea',phone:'6287796606'},
+  {id:'U008',username:'shadab.purnea',password:'Utrust@2025',name:'Shadab Azher',role:'officer',email:'shadab@utrust.in',avatar:'SA',branch:'Purnea',phone:'6287796616'},
+  {id:'U009',username:'ranjeet.purnea',password:'Utrust@2025',name:'Ranjeet Kumar',role:'officer',email:'ranjeet@utrust.in',avatar:'RK',branch:'Purnea',phone:'9264476722'},
+  {id:'U010',username:'shivam.purnea',password:'Utrust@2025',name:'Shivam Kumar',role:'officer',email:'shivam@utrust.in',avatar:'SK',branch:'Purnea',phone:'9264476726'},
+  {id:'U011',username:'pranav.purnea',password:'Utrust@2025',name:'Pranav Kumar',role:'officer',email:'pranav@utrust.in',avatar:'PK',branch:'Purnea',phone:'6287796618'},
+  {id:'U012',username:'ashish.purnea',password:'Utrust@2025',name:'Ashish Kumar',role:'officer',email:'ashish@utrust.in',avatar:'AK',branch:'Purnea',phone:'9264476724'},
+  {id:'U013',username:'faraz.purnea',password:'Utrust@2025',name:'Faraz Akhtar',role:'officer',email:'faraz@utrust.in',avatar:'FA',branch:'Purnea',phone:'6287796619'},
+  {id:'U014',username:'arman.purnea',password:'Utrust@2025',name:'Arman Alam',role:'officer',email:'arman@utrust.in',avatar:'AA',branch:'Purnea',phone:'7352543435'},
+  {id:'U015',username:'sharad.purnea',password:'Utrust@2025',name:'Sharad Kumar',role:'officer',email:'sharad@utrust.in',avatar:'SK',branch:'Purnea',phone:'9264473723'},
+  {id:'U016',username:'abhinav.purnea',password:'Utrust@2025',name:'Abhinav Jha',role:'officer',email:'abhinav@utrust.in',avatar:'AJ',branch:'Purnea',phone:'9472684107'},
+  {id:'U017',username:'raja.purnea',password:'Utrust@2025',name:'Raja Kumar',role:'officer',email:'raja@utrust.in',avatar:'RK',branch:'Purnea',phone:'9113423617'},
+  {id:'U018',username:'mujahid.purnea',password:'Utrust@2025',name:'Mujahid Alam',role:'officer',email:'mujahid@utrust.in',avatar:'MA',branch:'Purnea',phone:'7979040048'},
+  {id:'U019',username:'ayush.purnea',password:'Utrust@2025',name:'Ayush Raj',role:'officer',email:'ayush@utrust.in',avatar:'AR',branch:'Purnea',phone:'6287796607'},
+  {id:'U020',username:'piyush.purnea',password:'Utrust@2025',name:'Piyush Ranjan',role:'officer',email:'piyush@utrust.in',avatar:'PR',branch:'Purnea',phone:'9264476716'},
+  {id:'U021',username:'faiyaz.kishanganj',password:'Utrust@2025',name:'Faiyaz Alam',role:'officer',email:'faiyaz@utrust.in',avatar:'FA',branch:'Kishanganj',phone:'6287796620'},
+  {id:'U022',username:'dilkhush.kishanganj',password:'Utrust@2025',name:'Dilkhush Ansari',role:'officer',email:'dilkhush@utrust.in',avatar:'DA',branch:'Kishanganj',phone:'6287796622'},
+  {id:'U023',username:'mithun.kishanganj',password:'Utrust@2025',name:'Mithun Kr Saha',role:'officer',email:'mithun@utrust.in',avatar:'MS',branch:'Kishanganj',phone:'9031021468'},
+  {id:'U024',username:'avinash.kishanganj',password:'Utrust@2025',name:'Avinash Kumar',role:'officer',email:'avinash@utrust.in',avatar:'AK',branch:'Kishanganj',phone:'9563402114'},
+  {id:'U025',username:'mukesh.katihar',password:'Utrust@2025',name:'Mukesh Karmakar',role:'officer',email:'mukesh.k@utrust.in',avatar:'MK',branch:'Katihar',phone:'9264476737'},
+  {id:'U026',username:'prince.katihar',password:'Utrust@2025',name:'Prince Gourav',role:'officer',email:'prince@utrust.in',avatar:'PG',branch:'Katihar',phone:'8825341068'},
+  {id:'U027',username:'satyam.katihar',password:'Utrust@2025',name:'Satyam Singh',role:'officer',email:'satyam@utrust.in',avatar:'SS',branch:'Katihar',phone:'8789734424'},
+  {id:'U028',username:'sonu.bhagalpur',password:'Utrust@2025',name:'Sonu Ghosh',role:'officer',email:'sonu@utrust.in',avatar:'SG',branch:'Bhagalpur',phone:'9264476729'},
+  {id:'U029',username:'mukesh.sinha.bhagalpur',password:'Utrust@2025',name:'Mukesh Kumar Sinha',role:'officer',email:'mukesh.s@utrust.in',avatar:'MS',branch:'Bhagalpur',phone:'9031021478'},
+  {id:'U030',username:'kundan.bhagalpur',password:'Utrust@2025',name:'Kundan Kumar',role:'officer',email:'kundan@utrust.in',avatar:'KK',branch:'Bhagalpur',phone:'9264476727'},
+  {id:'U031',username:'sanjeev.bhagalpur',password:'Utrust@2025',name:'Sanjeev Kumar',role:'officer',email:'sanjeev@utrust.in',avatar:'SK',branch:'Bhagalpur',phone:'6287901688'},
+  {id:'U032',username:'anaya.bhagalpur',password:'Utrust@2025',name:'Anaya Sharma',role:'officer',email:'anaya@utrust.in',avatar:'AS',branch:'Bhagalpur',phone:'9264476747'},
+  {id:'U033',username:'binod.bhagalpur',password:'Utrust@2025',name:'Binod Kumar',role:'officer',email:'binod@utrust.in',avatar:'BK',branch:'Bhagalpur',phone:'6287796617'},
+  {id:'U034',username:'gautam.bhagalpur',password:'Utrust@2025',name:'Gautam Kumar Singh',role:'officer',email:'gautam@utrust.in',avatar:'GS',branch:'Bhagalpur',phone:'6287796601'},
+  {id:'U035',username:'shariqe.bhagalpur',password:'Utrust@2025',name:'Shariqe Quiser',role:'officer',email:'shariqe@utrust.in',avatar:'SQ',branch:'Bhagalpur',phone:'9031021480'},
+  {id:'U036',username:'amol.bhagalpur',password:'Utrust@2025',name:'Amol Kumar',role:'officer',email:'amol@utrust.in',avatar:'AK',branch:'Bhagalpur',phone:'6287796602'},
+  {id:'U037',username:'pritam.bhagalpur',password:'Utrust@2025',name:'Pritam Kumar',role:'officer',email:'pritam@utrust.in',avatar:'PK',branch:'Bhagalpur',phone:'9031021475'},
+  {id:'U038',username:'sachin.bhagalpur',password:'Utrust@2025',name:'Sachin Kumar',role:'officer',email:'sachin@utrust.in',avatar:'SK',branch:'Bhagalpur',phone:'9031021454'},
+  {id:'U039',username:'neha.banka',password:'Utrust@2025',name:'Neha Kumari',role:'officer',email:'neha@utrust.in',avatar:'NK',branch:'Banka',phone:'9264476746'},
+  {id:'U040',username:'kunal.khagaria',password:'Utrust@2025',name:'Kunal Anand',role:'officer',email:'kunal@utrust.in',avatar:'KA',branch:'Khagaria',phone:'6204234330'},
+  {id:'U041',username:'ambuj.khagaria',password:'Utrust@2025',name:'Ambuj',role:'officer',email:'ambuj@utrust.in',avatar:'AM',branch:'Khagaria',phone:'7004744394'},
+  {id:'U042',username:'nitin.saharsa',password:'Utrust@2025',name:'Nitin Kumar',role:'officer',email:'nitin@utrust.in',avatar:'NK',branch:'Saharsa',phone:'9264476745'},
+  {id:'U043',username:'deepak.saharsa',password:'Utrust@2025',name:'Deepak Kumar',role:'officer',email:'deepak@utrust.in',avatar:'DK',branch:'Saharsa',phone:'9304511215'},
+  {id:'U044',username:'shakib.saharsa',password:'Utrust@2025',name:'Shakib Hassan',role:'officer',email:'shakib@utrust.in',avatar:'SH',branch:'Saharsa',phone:'9955250256'},
+  {id:'U045',username:'amresh.supaul',password:'Utrust@2025',name:'Amresh Kumar',role:'officer',email:'amresh@utrust.in',avatar:'AK',branch:'Supaul',phone:'9122676789'},
+  {id:'U046',username:'shivam.supaul',password:'Utrust@2025',name:'Shivam Panday',role:'officer',email:'shivam.p@utrust.in',avatar:'SP',branch:'Supaul',phone:'9264476728'},
+  {id:'U047',username:'abhishek.supaul',password:'Utrust@2025',name:'Abhishek Panday',role:'officer',email:'abhishek@utrust.in',avatar:'AP',branch:'Supaul',phone:'9599315817'},
+  {id:'U048',username:'intkhab.forbesganj',password:'Utrust@2025',name:'Intkhab Alam',role:'officer',email:'intkhab@utrust.in',avatar:'IA',branch:'Forbesganj',phone:'6287796615'},
+  {id:'U049',username:'awinash.forbesganj',password:'Utrust@2025',name:'Awinash Singh',role:'officer',email:'awinash@utrust.in',avatar:'AS',branch:'Forbesganj',phone:'9264476713'},
+  {id:'U050',username:'rajeev.forbesganj',password:'Utrust@2025',name:'Rajeev Ranjan Das',role:'officer',email:'rajeev@utrust.in',avatar:'RD',branch:'Forbesganj',phone:'9031021471'},
+  {id:'U051',username:'shashi.forbesganj',password:'Utrust@2025',name:'Shashi Sekhar',role:'officer',email:'shashi@utrust.in',avatar:'SS',branch:'Forbesganj',phone:'9031021469'},
+  {id:'U052',username:'hassam.forbesganj',password:'Utrust@2025',name:'Hassam Ahmad',role:'officer',email:'hassam@utrust.in',avatar:'HA',branch:'Forbesganj',phone:'9031021472'},
+  {id:'U053',username:'yusuf.forbesganj',password:'Utrust@2025',name:'Md Yusuf',role:'officer',email:'yusuf@utrust.in',avatar:'MY',branch:'Forbesganj',phone:'9031021467'},
+  {id:'U054',username:'mohid.forbesganj',password:'Utrust@2025',name:'Mohid Raza',role:'officer',email:'mohid@utrust.in',avatar:'MR',branch:'Forbesganj',phone:'7488711074'},
+  {id:'U055',username:'devam.forbesganj',password:'Utrust@2025',name:'Devam Verma',role:'officer',email:'devam@utrust.in',avatar:'DV',branch:'Forbesganj',phone:'6206841933'}
+];
+
+function loadCreds(){try{var s=localStorage.getItem('utrust_creds');if(s){var p=JSON.parse(s);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return DEFAULT_CREDS.slice();}
+var CRED_LIST=loadCreds();
+function saveCreds(list){CRED_LIST.length=0;list.forEach(function(u){CRED_LIST.push(u);});try{localStorage.setItem('utrust_creds',JSON.stringify(list));}catch(e){}}
+
+// ── CAR DATA ─────────────────────────────────────────────
+var BRANDS={
+  'Maruti Suzuki':['Alto','Alto K10','WagonR','Swift','Dzire','Baleno','Ertiga','Vitara Brezza','Celerio','Ignis','Ciaz','S-Presso','Fronx','Jimny','Grand Vitara','XL6','Eeco'],
+  'Hyundai':['Santro','i10','Grand i10','Grand i10 Nios','i20','Active i20','Xcent','Aura','Verna','Elantra','Creta','Venue','Tucson','Alcazar'],
+  'Tata':['Nano','Tiago','Tigor','Nexon','Nexon EV','Harrier','Safari','Altroz','Punch','Punch EV','Hexa','Curvv','Zest','Bolt'],
+  'Mahindra':['Bolero','Bolero Neo','Scorpio','Scorpio Classic','Scorpio N','Thar','XUV300','XUV400','XUV700','KUV100','TUV300','Marazzo','Alturas G4','Xylo'],
+  'Honda':['Brio','Amaze','Jazz','WR-V','City','City Hybrid','Mobilio','BR-V','CR-V','Accord','Civic','Elevate'],
+  'Toyota':['Etios','Etios Liva','Corolla Altis','Yaris','Camry','Innova','Innova Crysta','Innova HyCross','Fortuner','Legender','Glanza','Urban Cruiser','Hyryder','Vellfire','Hilux'],
+  'Kia':['Seltos','Sonet','Carens','Carnival','EV6','Clavis'],
+  'Renault':['Pulse','Duster','Kwid','Triber','Kiger','Captur'],
+  'Nissan':['Micra','Sunny','Terrano','Kicks','Magnite','Datsun Go','Datsun Redi-Go'],
+  'Ford':['Figo','Figo Aspire','EcoSport','Endeavour','Freestyle','Mustang'],
+  'Chevrolet':['Beat','Spark','Sail','Cruze','Enjoy','Captiva','Tavera'],
+  'Volkswagen':['Polo','Vento','Tiguan','T-Roc','Taigun','Virtus'],
+  'Skoda':['Fabia','Rapid','Octavia','Superb','Yeti','Kodiaq','Karoq','Kushaq','Slavia','Kylaq'],
+  'MG':['Hector','Hector Plus','ZS EV','Gloster','Astor','Comet EV','Windsor'],
+  'Jeep':['Compass','Meridian','Wrangler','Grand Cherokee'],
+  'BMW':['1 Series','3 Series','5 Series','7 Series','X1','X3','X5','X6','M3','M5'],
+  'Mercedes-Benz':['A-Class','C-Class','E-Class','S-Class','GLA','GLB','GLC','GLE','GLS'],
+  'Audi':['A3','A4','A6','A8','Q2','Q3','Q5','Q7','Q8'],
+  'Other':['-- Type Manually --']
+};
+var VARIANTS={
+  'Swift':['LXI','VXI','ZXI','ZXI+','VXI AMT','ZXI AMT'],
+  'Dzire':['LXI','VXI','ZXI','ZXI+','VXI AMT','ZXI AMT'],
+  'Baleno':['Sigma','Delta','Zeta','Alpha','Delta AMT'],
+  'WagonR':['LXI','VXI','ZXI','VXI AMT','ZXI AMT'],
+  'Creta':['E','EX','S','S+','SX','SX(O)','SX Turbo','SX IVT'],
+  'i20':['Era','Magna','Sportz','Asta','Asta(O)','Sportz Turbo'],
+  'Verna':['EX','S','S+','SX','SX(O)','SX Turbo'],
+  'Venue':['E','S','S+','SX','SX+','SX(O)','SX Turbo iMT'],
+  'Nexon':['XE','XM','XT','XZ','XZ+','XZ+ Lux','XZA+'],
+  'Tiago':['XE','XM','XT','XZ','XZ+'],
+  'Harrier':['XE','XM','XT','XZ','XZ+','XZA+'],
+  'Safari':['XE','XM','XT','XZ','XZ+','XZA+','Adventure Edition'],
+  'Altroz':['XE','XM','XM+','XT','XZ','XZ+','iTurbo XZ'],
+  'Punch':['Pure','Adventure','Accomplished','Creative'],
+  'Bolero':['SLX','ZLX','B4','B6','B6 Opt'],
+  'Scorpio N':['Z2','Z4','Z6','Z8','Z8 L'],
+  'Thar':['AX(O) Petrol ST','AX(O) Diesel ST','LX Petrol HT','LX Diesel HT'],
+  'XUV700':['MX','AX3','AX5','AX5 L','AX7','AX7 L'],
+  'Seltos':['HTK','HTK+','HTX','HTX+','GTX','GTX+','HTX AT','GTX AT'],
+  'Sonet':['HTE','HTK','HTK+','HTX','HTX+','GTX','GTX+'],
+  'City':['SV','V','VX','ZX','V CVT','VX CVT'],
+  'Innova Crysta':['GX','VX','ZX','GX AT','VX AT','Touring Sport'],
+  'Fortuner':['2WD MT','2WD AT','4WD MT','4WD AT','Legender'],
+  'EcoSport':['Ambiente','Trend','Titanium','Titanium+','S'],
+  'Duster':['RxE','RxL','RxS','RxZ','RxZ EDC'],
+  'Kwid':['STD','RXT','RXT(O)','Climber','RXT AMT'],
+  'Kiger':['RXE','RXL','RXT','RXT(O)','RXT CVT'],
+  'Polo':['Comfortline','Highline','Highline+','GT TSI'],
+  'Taigun':['Comfortline 1.0','Highline 1.0','Topline 1.0','GT Plus 1.5 AT'],
+  'Hector':['Style','Super','Smart','Sharp','Sharp Pro'],
+  'Compass':['Sport','Longitude','Limited','Limited Plus','Trailhawk'],
+  'default':['Base','Mid','Top','Premium','Luxury','Limited Edition','-- Type Manually --']
+};
+
+// ── PRICE ALGORITHM (with challan + volume) ───────────────────────────────────
+function calcAlgo(idv, purchaseVal, year, insExpired, accidental, claimHistory, odometer, engine, fuel, challanAmt, volumeCC) {
+  var baseRaw = insExpired ? purchaseVal : idv;
+  var base = parseFloat(baseRaw)||0;
+  if (!base||base<1000||!year) return null;
+  var age = new Date().getFullYear()-parseInt(year);
+  if (age<0||age>30) return null;
+  var price = base; var steps = [];
+
+  if (insExpired) {
+    steps.push({label:'Base: purchase value (no insurance)',val:price,type:'base'});
+    var nip=price*0.10; price-=nip;
+    steps.push({label:'No insurance penalty (10%)',val:-nip,type:'minus'});
+  } else {
+    steps.push({label:'Base IDV (current insured value)',val:price,type:'base'});
+  }
+
+  var depN=[0,0.05,0.10,0.15,0.20,0.25,0.30,0.38,0.46,0.52,0.58,0.63,0.67,0.70,0.73,0.76,0.78,0.80,0.82,0.84,0.86];
+  var depE=[0,0.08,0.14,0.20,0.27,0.33,0.40,0.48,0.55,0.61,0.66,0.71,0.75,0.78,0.81,0.84,0.86,0.88,0.89,0.90,0.91];
+  var depTable=insExpired?depE:depN;
+  var depIdx=Math.min(Math.max(age,0),20);
+  var dep=(depTable[depIdx]!==undefined)?depTable[depIdx]:0.86;
+  var depAmt=price*dep; price-=depAmt;
+  steps.push({label:'Age depreciation ('+age+'yr, '+Math.round(dep*100)+'%)',val:-depAmt,type:'minus'});
+
+  // Engine volume premium: >2000cc diesel gets premium, <1000cc gets discount
+  var vol = parseFloat(volumeCC)||0;
+  if (vol > 0) {
+    var volAdj = 0;
+    if (vol > 2000 && fuel === 'Diesel') { volAdj = 0.04; }
+    else if (vol > 1500) { volAdj = 0.02; }
+    else if (vol < 1000) { volAdj = -0.02; }
+    if (volAdj !== 0) {
+      var vadj = price*volAdj; price+=vadj;
+      steps.push({label:'Engine volume adj ('+vol+'cc)',val:vadj,type:volAdj>0?'plus':'minus'});
+    }
+  }
+
+  if (odometer) {
+    var odo=parseInt(odometer); var diff=odo-age*12000;
+    if (diff>0){var pen=Math.min(diff*0.8,price*0.08);price-=pen;steps.push({label:'High odometer penalty',val:-pen,type:'minus'});}
+    else if (diff<-5000){var bon=Math.min(Math.abs(diff)*0.3,price*0.04);price+=bon;steps.push({label:'Low odometer bonus',val:bon,type:'plus'});}
+  }
+  if (accidental==='Yes'){var ap=price*0.12;price-=ap;steps.push({label:'Accidental penalty (12%)',val:-ap,type:'minus'});}
+  var clMap={'None':0,'1 Minor':0.04,'1 Major':0.10,'2+ Claims':0.15,'Unknown':0.06};
+  var cp=clMap[claimHistory]||0;
+  if (cp>0){var cpen=price*cp;price-=cpen;steps.push({label:'Claim history ('+claimHistory+')',val:-cpen,type:'minus'});}
+  var engMap={'Excellent':0.03,'Good':0,'Fair':-0.05,'Poor':-0.12};
+  var ea=engMap[engine]||0;
+  if (ea!==0){var eadj=price*ea;price+=eadj;steps.push({label:'Engine condition ('+engine+')',val:eadj,type:ea>0?'plus':'minus'});}
+  var fMap={'Diesel':0.03,'Electric':0.05,'Hybrid':0.04,'CNG':-0.02,'Petrol':0,'LPG':-0.03};
+  var fa=fMap[fuel]||0;
+  if (fa!==0){var fadj=price*fa;price+=fadj;steps.push({label:'Fuel type ('+fuel+')',val:fadj,type:fa>0?'plus':'minus'});}
+  var margin=price*0.08;price-=margin;
+  steps.push({label:'Dealer margin (8%)',val:-margin,type:'minus'});
+  if (challanAmt&&parseFloat(challanAmt)>0){
+    var chal=parseFloat(challanAmt);price-=chal;
+    steps.push({label:'Pending challans (full deduction)',val:-chal,type:'minus'});
+  }
+  price=Math.max(price,10000);
+  steps.push({label:'Recommended Purchase Price',val:price,type:'result'});
+  return {price:Math.round(price),steps:steps};
+}
+
+var fmt=function(n){return n?'\u20B9'+Math.round(n).toLocaleString('en-IN'):'\u2014';};
+var fmtL=function(n){if(!n||n<100)return'\u2014';if(n<100000)return'\u20B9'+Math.round(n).toLocaleString('en-IN');return'\u20B9'+(n/100000).toFixed(2)+'L';};
+var BRANCHES=['Purnea','Bhagalpur','Forbesganj','Kishanganj','Katihar','Banka','Khagaria','Saharsa','Supaul'];
+var SAMPLE=[
+  {id:'S001',reg:'BR04AB1234',brand:'Maruti Suzuki',model:'Swift',variant:'ZXI',year:2021,fuel:'Petrol',transmission:'Manual',volume_cc:1197,odometer:38000,status:'approved',officer:'Dilnawaz Ahmad',officerId:'U002',branch:'Purnea',price:485000,algo_price:470000,approved_price:480000,idv:520000,purchase_value:0,insurance_expired:false,rating:7,submitted:'2026-03-20',ownership:'1st',insurance_valid_od:'2026-12-31',insurance_valid_tp:'2027-06-30',claim_history:'None',engine:'Good',tyres:'Good',battery:'Good',electricals:'Good',accidental:'No',flood:'No',challan_verified:false,challan_amount:0,challan_details:'',photos:{},docs:{}},
+  {id:'S002',reg:'BR08CD5678',brand:'Hyundai',model:'Creta',variant:'SX',year:2022,fuel:'Diesel',transmission:'Automatic',volume_cc:1493,odometer:28000,status:'pending',officer:'Sajan Kr Saha',officerId:'U003',branch:'Purnea',price:1050000,algo_price:980000,approved_price:0,idv:1120000,purchase_value:0,insurance_expired:false,rating:9,submitted:'2026-04-20',ownership:'1st',insurance_valid_od:'2026-09-15',insurance_valid_tp:'2026-09-15',claim_history:'None',engine:'Excellent',tyres:'Excellent',battery:'Good',electricals:'Excellent',accidental:'No',flood:'No',challan_verified:false,challan_amount:0,challan_details:'',photos:{},docs:{}}
+];
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// REACT APP — plain createElement, no JSX, no Babel
+// ═══════════════════════════════════════════════════════
+var h = React.createElement;
+var useState = React.useState;
+var useEffect = React.useEffect;
+var useRef = React.useRef;
+
+// ── TINY HELPERS ──────────────────────────────────────
+function el(tag, props) {
+  var children = Array.prototype.slice.call(arguments, 2);
+  return h.apply(null, [tag, props].concat(children.map(function(c){
+    return Array.isArray(c) ? c : c;
+  })));
+}
+function StatusBadge(props) {
+  var cls={pending:'b-pend',approved:'b-appr',rejected:'b-rejt',draft:'b-drft',review:'b-pend'};
+  var lbl={pending:'PENDING',approved:'APPROVED',rejected:'REJECTED',draft:'DRAFT',review:'REVIEW'};
+  return h('span',{className:'badge '+(cls[props.status]||'b-drft')},lbl[props.status]||(props.status||'').toUpperCase());
+}
+function Toast(props) {
+  useEffect(function(){var t=setTimeout(props.onClose,3500);return function(){clearTimeout(t);}},[]);
+  return h('div',{className:'toast '+props.type},
+    h('span',null,props.type==='success'?'✓':props.type==='error'?'✕':'ℹ'),
+    props.message
+  );
+}
+function Modal(props) {
+  return h('div',{className:'modal-bg',onClick:function(e){if(e.target===e.currentTarget)props.onClose();}},
+    h('div',{className:'modal'},
+      h('div',{className:'modal-ttl'},props.title),
+      props.sub && h('div',{className:'modal-sub'},props.sub),
+      props.children
+    )
+  );
+}
+function BarRow(props) {
+  var pct = props.max ? Math.round(props.val/props.max*100) : 0;
+  return h('div',{className:'bar-row'},
+    h('div',{className:'bar-lbl',style:{width:props.wide?110:90}},props.label),
+    h('div',{style:{flex:1}},
+      h('div',{className:'bar-track'},h('div',{className:'bar-fill',style:{width:pct+'%',background:props.color||'var(--acc)'}})),
+      props.sub && h('div',{style:{fontSize:10,color:'var(--tx3)',marginTop:2}},props.sub)
+    ),
+    h('div',{className:'bar-val'},props.val)
+  );
+}
+function Field(props) {
+  return h('div',{className:'field'+(props.cls?' '+props.cls:'')},
+    props.label && h('label',null,props.label),
+    props.children
+  );
+}
+function Inp(props) {
+  return h('input',Object.assign({
+    style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',fontFamily:'inherit'}
+  },props));
+}
+function Sel(props) {
+  var opts = props.options||[];
+  return h('select',Object.assign({
+    style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',fontFamily:'inherit'}
+  },props),
+    opts.map(function(o,i){
+      var val = typeof o==='object'?o.value:o;
+      var lbl = typeof o==='object'?o.label:o;
+      return h('option',{key:i,value:val},lbl);
+    })
+  );
+}
+
+// ── CAMERA ────────────────────────────────────────────
+function CameraCapture(props) {
+  var label=props.label; var onCapture=props.onCapture; var captured=props.captured;
+  var videoRef=useRef(null); var canvasRef=useRef(null); var streamRef=useRef(null);
+  var _s=useState(false); var open=_s[0]; var setOpen=_s[1];
+  var _e=useState(''); var err=_e[0]; var setErr=_e[1];
+  var _f=useState('environment'); var facing=_f[0]; var setFacing=_f[1];
+
+  function kill(){if(streamRef.current){streamRef.current.getTracks().forEach(function(t){t.stop();});streamRef.current=null;}if(videoRef.current)videoRef.current.srcObject=null;}
+  function start(f){
+    setErr(''); kill(); var t=f||'environment';
+    var tries=[{video:{facingMode:{exact:t},width:{ideal:1280}}},{video:{facingMode:t}},{video:true}];
+    var i=0;
+    function next(){if(i>=tries.length){setErr('Camera unavailable');return;}
+      navigator.mediaDevices.getUserMedia(tries[i++]).then(function(stream){
+        streamRef.current=stream; setFacing(t); setOpen(true);
+        requestAnimationFrame(function(){if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play().catch(function(){});}});
+      }).catch(function(){next();});
+    }
+    next();
+  }
+  function stop(){kill();setOpen(false);}
+  function capture(){
+    var v=videoRef.current; var c=canvasRef.current; if(!v||!c)return;
+    c.width=v.videoWidth||640; c.height=v.videoHeight||480;
+    var ctx=c.getContext('2d'); ctx.drawImage(v,0,0,c.width,c.height);
+    var ts=new Date().toLocaleString('en-IN');
+    var bh=Math.max(26,Math.round(c.height*0.055));
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,c.height-bh,c.width,bh);
+    ctx.fillStyle='#f5a623'; ctx.font='bold '+Math.round(bh*0.5)+'px monospace';
+    ctx.fillText('📍 '+ts+' | Utrust',8,c.height-Math.round(bh*0.18));
+    var url=c.toDataURL('image/jpeg',0.88); stop(); onCapture(url);
+  }
+  useEffect(function(){return function(){kill();};},[]);
+
+  return h('div',null,
+    h('div',{className:'cam-slot'+(captured?' captured':''),onClick:function(){if(!captured)start('environment');}},
+      h('div',{className:'cam-preview'},
+        captured
+          ? h('img',{src:captured,alt:label,style:{width:'100%',height:'100%',objectFit:'cover'}})
+          : h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',padding:14}},
+              h('span',{style:{fontSize:24,marginBottom:6}},'📷'),
+              h('span',{style:{fontSize:11,color:err?'var(--red)':'var(--tx3)',textAlign:'center'}},err||'Tap to capture')
+            )
+      ),
+      h('div',{className:'cam-lbl'},label+(captured?' ✓':''))
+    ),
+    captured && h('button',{className:'btn btn-danger btn-sm',style:{width:'100%',marginTop:4},onClick:function(e){e.stopPropagation();onCapture(null);start('environment');}},'\uD83D\uDD04 Retake'),
+    open && h('div',{className:'cam-modal'},
+      h('div',{style:{color:'#fff',fontSize:14,fontWeight:700,marginBottom:8}},label),
+      h('div',{style:{width:'100%',maxWidth:480,borderRadius:12,overflow:'hidden',background:'#000'}},
+        h('video',{ref:videoRef,autoPlay:true,playsInline:true,muted:true,style:{width:'100%',display:'block'}}),
+        h('canvas',{ref:canvasRef,style:{display:'none'}})
+      ),
+      h('div',{style:{color:facing==='environment'?'var(--grn)':'var(--acc)',fontSize:11,fontFamily:'monospace'}},
+        facing==='environment'?'🔙 Rear camera':'🤳 Front camera'
+      ),
+      h('div',{style:{display:'flex',gap:14,alignItems:'center',marginTop:6}},
+        h('button',{className:'btn btn-ghost',onClick:stop},'✕ Cancel'),
+        h('div',{className:'shutter',onClick:capture},'📸'),
+        h('button',{className:'btn btn-ghost',onClick:function(){start(facing==='environment'?'user':'environment');}},'\uD83D\uDD04 Flip')
+      )
+    )
+  );
+}
+
+// ── LOGIN ─────────────────────────────────────────────
+function Login(props) {
+  var _u=useState(''); var user=_u[0]; var setUser=_u[1];
+  var _p=useState(''); var pass=_p[0]; var setPass=_p[1];
+  var _e=useState(''); var err=_e[0]; var setErr=_e[1];
+  function doLogin(){
+    var u=CRED_LIST.find(function(c){return c.username===user.trim()&&c.password===pass;});
+    if(u){props.onLogin(Object.assign({},u));setErr('');}
+    else setErr('Invalid username or password.');
+  }
+  return h('div',{className:'login-screen'},
+    h('div',{className:'login-card'},
+      h('div',{className:'login-logo'},
+        h('div',{className:'login-logo-icon'},'🚗'),
+        h('div',null,
+          h('div',{style:{fontSize:22,fontWeight:800,letterSpacing:'-0.01em'}},'Utrust'),
+          h('div',{style:{fontSize:10,color:'var(--tx3)',fontFamily:'monospace',letterSpacing:'0.08em'}},'VEHICLE MANAGEMENT SYSTEM')
+        )
+      ),
+      h('div',{style:{fontSize:22,fontWeight:800,marginBottom:4}},'Sign In'),
+      h('div',{style:{fontSize:13,color:'var(--tx2)',marginBottom:22}},'Enter your assigned credentials'),
+      h(Field,{label:'Username'},
+        h(Inp,{value:user,onChange:function(e){setUser(e.target.value);},placeholder:'e.g. admin',autoComplete:'off',onKeyDown:function(e){if(e.key==='Enter')doLogin();}})
+      ),
+      h(Field,{label:'Password'},
+        h(Inp,{type:'password',value:pass,onChange:function(e){setPass(e.target.value);},placeholder:'••••••••',autoComplete:'new-password',onKeyDown:function(e){if(e.key==='Enter')doLogin();}})
+      ),
+      err && h('div',{style:{background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:'var(--r)',padding:'10px 13px',fontSize:12,color:'var(--red)',marginBottom:14}},'⚠ '+err),
+      h('button',{className:'btn-primary',onClick:doLogin},'Sign In →'),
+      h('div',{style:{textAlign:'center',marginTop:14,fontSize:11,color:'var(--tx3)'}},'Contact Utrust Incharge for credentials')
+    )
+  );
+}
+
+// ── SIDEBAR ───────────────────────────────────────────
+function Sidebar(props) {
+  var user=props.user; var page=props.page; var setPage=props.setPage; var pc=props.pendingCount;
+  var navAdmin=[{id:'dash',icon:'⬡',label:'Dashboard'},{id:'vehicles',icon:'🚗',label:'Vehicles'},{id:'approval',icon:'✅',label:'Approvals',badge:pc},{id:'users',icon:'👥',label:'Employees'},{id:'mis',icon:'📈',label:'MIS'}];
+  var navLeader=[{id:'dash',icon:'⬡',label:'Dashboard'},{id:'vehicles',icon:'🚗',label:'Vehicles'},{id:'approval',icon:'✅',label:'Approvals',badge:pc},{id:'mis',icon:'📈',label:'MIS'}];
+  var navOfficer=[{id:'dash',icon:'⬡',label:'Dashboard'},{id:'vehicles',icon:'🚗',label:'My Vehicles'},{id:'add',icon:'➕',label:'New'}];
+  var nav=user.role==='admin'?navAdmin:user.role==='leader'?navLeader:navOfficer;
+  var roleLabel={admin:'ADMINISTRATOR',leader:'UTRUST INCHARGE',officer:'EVALUATOR'};
+  return h('div',{className:'sb'},
+    h('div',{className:'sb-logo'},
+      h('div',{className:'sb-icon'},'🚗'),
+      h('div',{className:'sb-name'},'Utrust')
+    ),
+    h('div',{className:'sb-user'},
+      h('div',{className:'av '+user.role},user.avatar),
+      h('div',{style:{minWidth:0}},
+        h('div',{className:'sb-uname'},user.name),
+        h('div',{className:'sb-urole'},roleLabel[user.role]),
+        h('div',{className:'sb-ubranch'},'📍 '+user.branch)
+      )
+    ),
+    h('div',{className:'nav-area'},
+      h('div',{className:'sb-sec'},'Navigation'),
+      nav.map(function(n){
+        return h('div',{key:n.id,className:'nav-it'+(page===n.id?' active':''),onClick:function(){props.setPage(n.id);}},
+          h('span',{className:'nav-ic'},n.icon),
+          h('span',{className:'nav-txt'},n.label),
+          n.badge>0 && h('span',{className:'nav-bd'},n.badge)
+        );
+      })
+    ),
+    h('div',{className:'sb-foot'},
+      h('button',{className:'logout-btn',onClick:props.onLogout},'⇐ Sign Out')
+    )
+  );
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+function Dashboard(props) {
+  var vs=props.vehicles; var user=props.user;
+  var mine=user.role==='officer'?vs.filter(function(v){return v.officerId===user.id;}):vs;
+  var total=mine.length; var appr=mine.filter(function(v){return v.status==='approved';}).length;
+  var pend=mine.filter(function(v){return v.status==='pending'||v.status==='review';}).length;
+  var avgPvs=mine.filter(function(v){return v.price>0;}); var avgP=avgPvs.length?avgPvs.reduce(function(a,v){return a+v.price;},0)/avgPvs.length:0;
+  var recent=mine.slice(0,6);
+  return h('div',null,
+    h('div',{className:'sg'},
+      [{l:'Total',v:total,i:'🚗',s:''},{l:'Approved',v:appr,i:'✅',s:total?Math.round(appr/total*100)+'%':''},{l:'Pending',v:pend,i:'⏳',s:'awaiting review'},{l:'Avg Price',v:fmtL(avgP),i:'💰',s:''}].map(function(s,i){
+        return h('div',{key:i,className:'sc'},
+          h('div',{className:'sc-lbl'},s.l),
+          h('div',{className:'sc-val'},s.v),
+          s.s && h('div',{className:'sc-sub'},s.s),
+          h('div',{className:'sc-ico'},s.i)
+        );
+      })
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-hdr'},
+        h('div',{className:'card-ttl'},'Recent Inspections'),
+        h('button',{className:'btn btn-ghost btn-sm',onClick:function(){props.setPage('vehicles');}},'\u2192 View All')
+      ),
+      h('div',{className:'tbl-wrap'},
+        h('table',null,
+          h('thead',null,h('tr',null,['Reg','Vehicle','Year','Branch','Evaluator','Price','Status'].map(function(t){return h('th',{key:t},t);}))),
+          h('tbody',null,
+            recent.length===0 && h('tr',null,h('td',{colSpan:7,style:{textAlign:'center',padding:40,color:'var(--tx3)'}},'No inspections yet')),
+            recent.map(function(v){
+              return h('tr',{key:v.id},
+                h('td',null,h('span',{style:{fontFamily:'monospace',color:'var(--acc)',fontSize:12}},v.reg)),
+                h('td',null,h('b',null,v.brand+' '+v.model),h('br'),h('span',{style:{fontSize:10,color:'var(--tx3)'}},v.variant||'')),
+                h('td',{style:{color:'var(--tx2)'}},v.year),
+                h('td',null,h('span',{className:'btag'},v.branch)),
+                h('td',{style:{fontSize:12,color:'var(--tx2)'}},v.officer),
+                h('td',{style:{fontFamily:'monospace',fontWeight:700,color:'var(--grn)'}},fmtL(v.price)),
+                h('td',null,h(StatusBadge,{status:v.status}))
+              );
+            })
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── VEHICLES LIST ─────────────────────────────────────
+function VehiclesList(props) {
+  var vs=props.vehicles; var user=props.user;
+  var _s=useState(''); var search=_s[0]; var setSearch=_s[1];
+  var _f=useState('all'); var filter=_f[0]; var setFilter=_f[1];
+  var _b=useState('all'); var branch=_b[0]; var setBranch=_b[1];
+  var mine=user.role==='officer'?vs.filter(function(v){return v.officerId===user.id;}):vs;
+  var filtered=mine.filter(function(v){
+    var q=search.toLowerCase();
+    var ms=!q||(v.reg||'').toLowerCase().includes(q)||(v.brand||'').toLowerCase().includes(q)||(v.model||'').toLowerCase().includes(q)||(v.seller_name||'').toLowerCase().includes(q);
+    var mf=filter==='all'||v.status===filter;
+    var mb=branch==='all'||v.branch===branch;
+    return ms&&mf&&mb;
+  });
+  return h('div',null,
+    h('div',{style:{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap',alignItems:'center'}},
+      h('div',{className:'search-bar',style:{flex:1,minWidth:180}},
+        h('span',null,'🔍'),
+        h('input',{placeholder:'Search reg, brand, seller...',value:search,onChange:function(e){setSearch(e.target.value);},style:{background:'none',border:'none',outline:'none',color:'var(--txt)',fontSize:13,flex:1,fontFamily:'inherit'}})
+      ),
+      user.role!=='officer' && h('select',{value:branch,onChange:function(e){setBranch(e.target.value);},style:{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'8px 12px',color:'var(--txt)',fontSize:13,outline:'none',fontFamily:'inherit'}},
+        h('option',{value:'all'},'All Branches'),
+        BRANCHES.map(function(b){return h('option',{key:b},b);})
+      ),
+      h('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
+        ['all','pending','approved','rejected','draft'].map(function(f){
+          return h('button',{key:f,className:'btn btn-sm '+(filter===f?'btn-acc':'btn-ghost'),onClick:function(){setFilter(f);},style:{textTransform:'uppercase',fontSize:10}},f);
+        })
+      ),
+      (user.role==='officer'||user.role==='admin') && h('button',{className:'btn btn-acc btn-sm',onClick:props.onAddNew},'➕ New')
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-hdr'},
+        h('div',{className:'card-ttl'},'Vehicle Records ',h('span',{style:{color:'var(--tx3)',fontWeight:400,fontSize:11,fontFamily:'monospace'}},'('+filtered.length+')'))
+      ),
+      h('div',{className:'tbl-wrap'},
+        h('table',null,
+          h('thead',null,h('tr',null,['Reg','Vehicle','Year','Odo','Branch','Evaluator','Price','Status','Action'].map(function(t){return h('th',{key:t},t);}))),
+          h('tbody',null,
+            filtered.length===0 && h('tr',null,h('td',{colSpan:9,style:{textAlign:'center',padding:40,color:'var(--tx3)'}},'No records found')),
+            filtered.map(function(v){
+              return h('tr',{key:v.id},
+                h('td',null,h('span',{style:{fontFamily:'monospace',color:'var(--acc)',fontSize:12}},v.reg)),
+                h('td',null,h('b',null,v.brand+' '+v.model),h('br'),h('span',{style:{fontSize:10,color:'var(--tx3)'}},v.variant||'')),
+                h('td',{style:{color:'var(--tx2)'}},v.year),
+                h('td',{style:{fontFamily:'monospace',fontSize:12}},(v.odometer||0).toLocaleString('en-IN')),
+                h('td',null,h('span',{className:'btag'},v.branch)),
+                h('td',{style:{fontSize:12,color:'var(--tx2)'}},v.officer),
+                h('td',{style:{fontFamily:'monospace',fontWeight:700,color:'var(--grn)'}},fmtL(v.price)),
+                h('td',null,h(StatusBadge,{status:v.status})),
+                h('td',null,
+                  h('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
+                    h('button',{className:'btn btn-ghost btn-sm',onClick:function(){props.setSelectedVehicle(v);props.setPage('detail');}},'View'),
+                    h('button',{className:'btn btn-ghost btn-sm',style:{color:'var(--acc)',fontSize:11},title:'Customer PDF',onClick:function(){genCustomerPDF(v);}},'📱'),
+                    h('button',{className:'btn btn-ghost btn-sm',style:{color:'var(--blu)',fontSize:11},title:'Vendor PDF',onClick:function(){genVendorPDF(v);}},'🏪'),
+                    user.role==='admin' && h('button',{className:'btn btn-danger btn-sm',onClick:function(){props.onDelete(v.id);}},'\uD83D\uDDD1')
+                  )
+                )
+              );
+            })
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── NEW INSPECTION FORM ───────────────────────────────
+function NewInspection(props) {
+  var user=props.user;
+  var _step=useState(0); var step=_step[0]; var setStep=_step[1];
+  var _mb=useState(''); var mBrand=_mb[0]; var setMBrand=_mb[1];
+  var _mm=useState(''); var mModel=_mm[0]; var setMModel=_mm[1];
+  var _mv=useState(''); var mVariant=_mv[0]; var setMVariant=_mv[1];
+  var _my=useState(''); var mYear=_my[0]; var setMYear=_my[1];
+  var _mt=useState(''); var mTrans=_mt[0]; var setMTrans=_mt[1];
+  var _data=useState({
+    reg:'',seller_name:'',seller_phone:'',brand:'',model:'',variant:'',year:'',fuel:'',transmission:'',ownership:'1st',
+    volume_cc:'',odometer:'',insurance_expired:false,insurance_valid_od:'',insurance_valid_tp:'',
+    idv:'',purchase_value:'',claim_history:'None',
+    engine:'',tyres:'',battery:'',electricals:'',accidental:'No',flood:'No',rating:7,
+    challan_verified:null,challan_amount:'',challan_details:'',
+    customer_expectation:'',price:'',remarks:'',
+    photos:{front:null,rear:null,left:null,right:null,interior1:null,interior2:null,engine:null,chassis:null,odometer_photo:null},
+    docs:{rc:null,insurance:null,pollution:null,extra:null}
+  });
+  var data=_data[0]; var setData=_data[1];
+  function set(k,v){setData(function(p){return Object.assign({},p,{[k]:v});});}
+  function setPhoto(k,v){setData(function(p){return Object.assign({},p,{photos:Object.assign({},p.photos,{[k]:v})});});}
+  function setDoc(k,v){setData(function(p){return Object.assign({},p,{docs:Object.assign({},p.docs,{[k]:v})});});}
+
+  var brandList=Object.keys(BRANDS);
+  var modelList=(data.brand&&data.brand!=='Other')?(BRANDS[data.brand]||[]):[];
+  var variantList=(data.model&&VARIANTS[data.model])?VARIANTS[data.model]:VARIANTS['default'];
+  var years=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,'-- Enter Manually --'];
+  var transList=['Manual','Automatic','CVT','AMT','DCT','iMT','-- Enter Manually --'];
+  var photoSlots=['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var photoDone=photoSlots.filter(function(k){return !!data.photos[k];}).length;
+  var fBrand=data.brand==='Other'?mBrand:data.brand;
+  var fModel=data.model==='-- Type Manually --'?mModel:data.model;
+  var fVariant=data.variant==='-- Type Manually --'?mVariant:data.variant;
+  var fYear=data.year==='-- Enter Manually --'?mYear:data.year;
+  var fTrans=data.transmission==='-- Enter Manually --'?mTrans:data.transmission;
+  var algo=calcAlgo(data.idv,data.purchase_value,fYear||data.year,data.insurance_expired,data.accidental,data.claim_history,data.odometer,data.engine,data.fuel,data.challan_amount,data.volume_cc);
+
+  function handleSubmit(isDraft) {
+    if (!isDraft) {
+      if (!data.reg){props.showToast('Registration number required','error');return;}
+      if (!fBrand&&!mBrand){props.showToast('Select or type a Brand','error');return;}
+      if (!fModel&&!mModel){props.showToast('Select or type a Model','error');return;}
+      if (!data.price||parseInt(data.price)<=0){props.showToast('Enter your estimated price','error');return;}
+    }
+    var docsClean={};
+    Object.keys(data.docs).forEach(function(k){var d=data.docs[k];docsClean[k]=d?{name:d.name,type:d.type}:null;});
+    props.onSubmit(Object.assign({},data,{
+      id:'V'+Date.now(),brand:fBrand||mBrand,model:fModel||mModel,variant:fVariant||mVariant||'',
+      year:fYear||data.year,transmission:fTrans||data.transmission,
+      odometer:parseInt(data.odometer)||0,price:parseInt(data.price)||0,
+      algo_price:algo?algo.price:0,idv:parseInt(data.idv)||0,purchase_value:parseInt(data.purchase_value)||0,
+      volume_cc:parseInt(data.volume_cc)||0,
+      customer_expectation:parseInt(data.customer_expectation)||0,
+      challan_amount:parseFloat(data.challan_amount)||0,challan_details:data.challan_details||'',challan_verified:data.challan_verified,
+      officer:user.name,officerId:user.id,branch:user.branch,docs:docsClean,
+      status:isDraft?'draft':'pending',submitted:new Date().toISOString().slice(0,10)
+    }));
+  }
+
+  var stepNames=['Basic Info','Odometer','Photos','Documents','Insurance','Assessment','Pricing','Submit'];
+  var inpStyle={width:'100%',background:'var(--sur3)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',fontFamily:'inherit'};
+
+  function renderStep() {
+    if (step===0) return h('div',{className:'fcard'},
+      h('div',{className:'fcard-ttl'},'🚗 Vehicle Basic Details'),
+      h('div',{className:'fcard-sub'},'All starred (*) fields required'),
+      h('div',{className:'fg'},
+        h('div',{className:'field s2'},
+          h('label',null,'Registration Number *'),
+          h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',letterSpacing:'0.1em',fontSize:16}),value:data.reg,onChange:function(e){set('reg',e.target.value.toUpperCase());},placeholder:'e.g. BR04AB1234'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Seller / Customer Name'),
+          h('input',{style:inpStyle,value:data.seller_name,onChange:function(e){set('seller_name',e.target.value);},placeholder:'Vehicle owner name'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Seller Phone'),
+          h('input',{style:inpStyle,type:'tel',value:data.seller_phone||'',onChange:function(e){set('seller_phone',e.target.value);},placeholder:'10-digit mobile'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Brand *'),
+          h('select',{style:inpStyle,value:data.brand,onChange:function(e){set('brand',e.target.value);set('model','');set('variant','');}},
+            h('option',{value:''},'Select Brand'),
+            brandList.map(function(b){return h('option',{key:b},b);}),
+          ),
+          data.brand==='Other' && h('input',{style:Object.assign({},inpStyle,{marginTop:6,borderColor:'var(--acc)'}),value:mBrand,onChange:function(e){setMBrand(e.target.value);},placeholder:'Type brand name...'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Model *'),
+          data.brand&&data.brand!=='Other'
+            ? h('div',null,
+                h('select',{style:inpStyle,value:data.model,onChange:function(e){set('model',e.target.value);set('variant','');}},
+                  h('option',{value:''},'Select Model'),
+                  modelList.map(function(m){return h('option',{key:m},m);}),
+                  h('option',{value:'-- Type Manually --'},'-- Type Manually --')
+                ),
+                data.model==='-- Type Manually --' && h('input',{style:Object.assign({},inpStyle,{marginTop:6,borderColor:'var(--acc)'}),value:mModel,onChange:function(e){setMModel(e.target.value);},placeholder:'Type model...'})
+              )
+            : h('input',{style:inpStyle,value:mModel,onChange:function(e){setMModel(e.target.value);},placeholder:'Type model name...'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Variant'),
+          data.model&&data.model!=='-- Type Manually --'&&data.brand!=='Other'
+            ? h('div',null,
+                h('select',{style:inpStyle,value:data.variant,onChange:function(e){set('variant',e.target.value);}},
+                  h('option',{value:''},'Select Variant'),
+                  variantList.map(function(v){return h('option',{key:v},v);})
+                ),
+                data.variant==='-- Type Manually --' && h('input',{style:Object.assign({},inpStyle,{marginTop:6,borderColor:'var(--acc)'}),value:mVariant,onChange:function(e){setMVariant(e.target.value);},placeholder:'Type variant...'})
+              )
+            : h('input',{style:inpStyle,value:mVariant,onChange:function(e){setMVariant(e.target.value);},placeholder:'Type variant...'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Year *'),
+          h('select',{style:inpStyle,value:data.year,onChange:function(e){set('year',e.target.value);}},
+            h('option',{value:''},'Select Year'),
+            years.map(function(y){return h('option',{key:y},y);})
+          ),
+          data.year==='-- Enter Manually --' && h('input',{style:Object.assign({},inpStyle,{marginTop:6,borderColor:'var(--acc)',fontFamily:'monospace',fontSize:16}),value:mYear,onChange:function(e){setMYear(e.target.value);},placeholder:'e.g. 2017'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Fuel Type *'),
+          h('select',{style:inpStyle,value:data.fuel,onChange:function(e){set('fuel',e.target.value);}},
+            h('option',{value:''},'Select'),
+            ['Petrol','Diesel','CNG','Electric','Hybrid','LPG'].map(function(f){return h('option',{key:f},f);})
+          )
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Transmission *'),
+          h('select',{style:inpStyle,value:data.transmission,onChange:function(e){set('transmission',e.target.value);}},
+            h('option',{value:''},'Select'),
+            transList.map(function(t){return h('option',{key:t},t);})
+          ),
+          data.transmission==='-- Enter Manually --' && h('input',{style:Object.assign({},inpStyle,{marginTop:6,borderColor:'var(--acc)'}),value:mTrans,onChange:function(e){setMTrans(e.target.value);},placeholder:'Type transmission...'})
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Ownership'),
+          h('select',{style:inpStyle,value:data.ownership,onChange:function(e){set('ownership',e.target.value);}},
+            ['1st','2nd','3rd','4th+'].map(function(o){return h('option',{key:o},o);})
+          )
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Engine Volume (cc) — for pricing'),
+          h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace'}),type:'number',value:data.volume_cc,onChange:function(e){set('volume_cc',e.target.value);},placeholder:'e.g. 1197 for 1.2L engine'}),
+          h('div',{style:{fontSize:10,color:'var(--tx3)',marginTop:4}},'Affects algorithm: >2000cc diesel gets +4%, <1000cc gets -2%')
+        )
+      )
+    );
+
+    if (step===1) return h('div',{className:'fcard'},
+      h('div',{className:'fcard-ttl'},'📍 Odometer Reading'),
+      h('div',{className:'fcard-sub'},'Enter reading and capture photo — timestamp auto-stamped'),
+      h('div',{className:'field',style:{marginBottom:18}},
+        h('label',null,'Odometer (km) *'),
+        h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:22,padding:'13px'}),type:'number',value:data.odometer,onChange:function(e){set('odometer',e.target.value);},placeholder:'e.g. 42000'})
+      ),
+      h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:8,letterSpacing:'0.07em',textTransform:'uppercase'}},'Odometer Photo (mandatory)'),
+      h(CameraCapture,{label:'Odometer Reading',onCapture:function(v){setPhoto('odometer_photo',v);},captured:data.photos.odometer_photo})
+    );
+
+    if (step===2) return h('div',{className:'fcard'},
+      h('div',{className:'fcard-ttl'},'📷 Inspection Photos'),
+      h('div',{className:'fcard-sub'},photoDone+'/8 captured — rear camera opens by default'),
+      h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}},'Exterior'),
+      h('div',{className:'cam-grid',style:{marginBottom:16}},
+        [['front','Front View'],['rear','Rear View'],['left','Left Side'],['right','Right Side']].map(function(p){
+          return h(CameraCapture,{key:p[0],label:p[1],onCapture:function(v){setPhoto(p[0],v);},captured:data.photos[p[0]]});
+        })
+      ),
+      h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}},'Interior'),
+      h('div',{className:'cam-grid',style:{marginBottom:16}},
+        h(CameraCapture,{label:'Dashboard',onCapture:function(v){setPhoto('interior1',v);},captured:data.photos.interior1}),
+        h(CameraCapture,{label:'Rear Seats',onCapture:function(v){setPhoto('interior2',v);},captured:data.photos.interior2})
+      ),
+      h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}},'Under Hood'),
+      h('div',{className:'cam-grid',style:{marginBottom:16}},
+        h(CameraCapture,{label:'Engine Bay',onCapture:function(v){setPhoto('engine',v);},captured:data.photos.engine}),
+        h(CameraCapture,{label:'Chassis/VIN',onCapture:function(v){setPhoto('chassis',v);},captured:data.photos.chassis})
+      ),
+      h('div',{className:'field'},
+        h('label',null,'Remarks'),
+        h('textarea',{rows:3,style:Object.assign({},inpStyle,{resize:'vertical'}),value:data.remarks,onChange:function(e){set('remarks',e.target.value);},placeholder:'Note scratches, dents, damages...'})
+      )
+    );
+
+    if (step===3) {
+      var docDefs=[['rc','📄','RC Certificate *'],['insurance','🛡','Insurance *'],['pollution','🌿','PUC Certificate'],['extra','📎','Additional']];
+      return h('div',{className:'fcard'},
+        h('div',{className:'fcard-ttl'},'📋 Documents'),
+        h('div',{className:'fcard-sub'},'RC and Insurance mandatory'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+          docDefs.map(function(item){
+            var k=item[0]; var icon=item[1]; var lbl=item[2]; var val=data.docs[k];
+            return h('div',{key:k},
+              h('input',{type:'file',id:'doc-'+k,accept:'image/*,application/pdf',style:{display:'none'},onChange:function(e){
+                var file=e.target.files[0]; if(!file)return;
+                var r=new FileReader(); r.onload=function(ev){setDoc(k,{name:file.name,type:file.type,data:ev.target.result});};r.readAsDataURL(file);
+              }}),
+              h('div',{className:'upzone'+(val?' done':''),onClick:function(){document.getElementById('doc-'+k).click();}},
+                h('div',{style:{fontSize:22,marginBottom:6}},val?'✅':icon),
+                h('div',{style:{fontSize:12,fontWeight:600,color:'var(--tx2)'}},val?'Uploaded':'Tap to Upload'),
+                h('div',{style:{fontSize:10,color:'var(--tx3)',marginTop:3,wordBreak:'break-all'}},val?val.name:lbl)
+              ),
+              val && h('button',{className:'btn btn-danger btn-sm',style:{width:'100%',marginTop:4},onClick:function(){setDoc(k,null);}},'\u2715 Remove')
+            );
+          })
+        )
+      );
+    }
+
+    if (step===4) return h('div',{className:'fcard'},
+      h('div',{className:'fcard-ttl'},'🛡 Insurance & IDV'),
+      h('div',{className:'fcard-sub'},'IDV is the base for price algorithm'),
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:data.insurance_expired?'var(--rdim)':'var(--sur2)',border:'1px solid '+(data.insurance_expired?'rgba(239,68,68,0.3)':'var(--bdr)'),borderRadius:'var(--r)',marginBottom:14}},
+        h('div',null,
+          h('div',{style:{fontSize:13,fontWeight:600}},'Insurance Expired / Not Available'),
+          h('div',{style:{fontSize:11,color:'var(--tx3)',marginTop:2}},'Switches to purchase-value based pricing')
+        ),
+        h('div',{style:{display:'flex',gap:7}},
+          h('button',{className:'ck-btn'+((!data.insurance_expired)?' good':''),onClick:function(){set('insurance_expired',false);}},'Active'),
+          h('button',{className:'ck-btn'+(data.insurance_expired?' bad':''),onClick:function(){set('insurance_expired',true);}},'Expired')
+        )
+      ),
+      !data.insurance_expired && h('div',{className:'fg',style:{marginBottom:14}},
+        h('div',{className:'field',style:{marginBottom:0}},
+          h('label',null,'OD Valid Until'),
+          h('input',{style:inpStyle,type:'date',value:data.insurance_valid_od,onChange:function(e){set('insurance_valid_od',e.target.value);}})
+        ),
+        h('div',{className:'field',style:{marginBottom:0}},
+          h('label',null,'TP Valid Until'),
+          h('input',{style:inpStyle,type:'date',value:data.insurance_valid_tp,onChange:function(e){set('insurance_valid_tp',e.target.value);}})
+        )
+      ),
+      h('div',{className:'fg'},
+        !data.insurance_expired
+          ? h('div',{className:'field'},
+              h('label',null,'IDV (₹) *'),
+              h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:16}),type:'number',value:data.idv,onChange:function(e){set('idv',e.target.value);},placeholder:'e.g. 750000'})
+            )
+          : h('div',{className:'field s2'},
+              h('label',null,'Original Purchase Value (₹) * ',h('span',{style:{color:'var(--acc)',fontSize:10}},'used instead of IDV')),
+              h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:16}),type:'number',value:data.purchase_value,onChange:function(e){set('purchase_value',e.target.value);},placeholder:'e.g. 900000'})
+            ),
+        h('div',{className:'field'},
+          h('label',null,'Claim History'),
+          h('select',{style:inpStyle,value:data.claim_history,onChange:function(e){set('claim_history',e.target.value);}},
+            ['None','1 Minor','1 Major','2+ Claims','Unknown'].map(function(c){return h('option',{key:c},c);})
+          )
+        )
+      )
+    );
+
+    if (step===5) {
+      var condItems=[
+        {lbl:'Engine Condition',k:'engine',opts:['Excellent','Good','Fair','Poor']},
+        {lbl:'Tyres',k:'tyres',opts:['Excellent','Good','Fair','Worn']},
+        {lbl:'Battery',k:'battery',opts:['Excellent','Good','Weak','Dead']},
+        {lbl:'Electricals',k:'electricals',opts:['Excellent','Good','Issues','Dead']}
+      ];
+      var boolItems=[{lbl:'Accidental History',k:'accidental'},{lbl:'Flood Damage',k:'flood'}];
+      return h('div',{className:'fcard'},
+        h('div',{className:'fcard-ttl'},'🔍 Condition Assessment'),
+        h('div',{className:'fcard-sub'},'Rate each component — affects algorithm'),
+        condItems.map(function(c){
+          return h('div',{key:c.k,className:'ck-item'},
+            h('span',{className:'ck-lbl'},c.lbl),
+            h('div',{className:'ck-btns'},
+              c.opts.map(function(o){
+                var cls=data[c.k]===o?(o==='Excellent'||o==='Good'?'good':o==='Fair'||o==='Weak'?'warn':'bad'):'';
+                return h('button',{key:o,className:'ck-btn '+cls,onClick:function(){set(c.k,o);}},o);
+              })
+            )
+          );
+        }),
+        boolItems.map(function(c){
+          return h('div',{key:c.k,className:'ck-item'},
+            h('span',{className:'ck-lbl'},c.lbl),
+            h('div',{className:'ck-btns'},
+              ['Yes','No','Unknown'].map(function(o){
+                var cls=data[c.k]===o?(o==='No'?'good':o==='Yes'?'bad':'warn'):'';
+                return h('button',{key:o,className:'ck-btn '+cls,onClick:function(){set(c.k,o);}},o);
+              })
+            )
+          );
+        }),
+        h('div',{style:{marginTop:14}},
+          h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}},'Overall Rating (1–10)'),
+          h('div',{className:'rating'},
+            [1,2,3,4,5,6,7,8,9,10].map(function(n){
+              return h('button',{key:n,className:'r-btn'+(data.rating===n?' sel':''),onClick:function(){set('rating',n);}},n);
+            })
+          )
+        ),
+        // CHALLANS
+        h('div',{style:{marginTop:16,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'var(--r2)',padding:'16px'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+            h('span',{style:{fontSize:18}},'🚔'),
+            h('div',{style:{fontSize:14,fontWeight:700}},'Pending Traffic Challans')
+          ),
+          h('div',{style:{fontSize:12,color:'var(--tx3)',marginBottom:12}},'Check on Parivahan.gov.in — full amount deducted from purchase price'),
+          h('div',{style:{display:'flex',gap:8,marginBottom:12}},
+            h('button',{className:'ck-btn'+(data.challan_verified===false?' good':''),onClick:function(){set('challan_verified',false);set('challan_amount','');set('challan_details','');}},'No Challans'),
+            h('button',{className:'ck-btn'+(data.challan_verified===true?' bad':''),onClick:function(){set('challan_verified',true);}},'Has Challans'),
+            h('button',{className:'ck-btn'+(data.challan_verified===null?' warn':''),onClick:function(){set('challan_verified',null);}},'Not Checked')
+          ),
+          data.challan_verified===true && h('div',null,
+            h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:6}},
+              h('div',{className:'field',style:{marginBottom:0}},
+                h('label',null,'Total Challan Amount (₹)'),
+                h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:15}),type:'number',value:data.challan_amount,onChange:function(e){set('challan_amount',e.target.value);},placeholder:'e.g. 5000'}),
+                data.challan_amount&&parseInt(data.challan_amount)>0 && h('div',{style:{fontSize:11,color:'var(--red)',marginTop:4,fontWeight:600}},'₹'+parseInt(data.challan_amount).toLocaleString('en-IN')+' fully deducted from price')
+              ),
+              h('div',{className:'field',style:{marginBottom:0}},
+                h('label',null,'Challan Details'),
+                h('input',{style:inpStyle,value:data.challan_details,onChange:function(e){set('challan_details',e.target.value);},placeholder:'e.g. Speed, Red light — 2024'})
+              )
+            )
+          ),
+          data.challan_verified===null && h('div',{style:{fontSize:11,color:'var(--acc)',padding:'7px 10px',background:'var(--adim)',borderRadius:'var(--r)'}},'⚠ Not verified — won\'t affect price calculation')
+        )
+      );
+    }
+
+    if (step===6) {
+      var priceDiff=data.price&&algo?((parseInt(data.price)-algo.price)/algo.price*100):null;
+      return h('div',{className:'fcard'},
+        h('div',{className:'fcard-ttl'},'💰 Your Price Estimate'),
+        h('div',{className:'fcard-sub'},'Enter your estimate first — algorithm reveals after'),
+        // Customer expectation
+        h('div',{style:{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r2)',padding:'14px',marginBottom:14}},
+          h('div',{style:{fontSize:11,fontWeight:700,color:'var(--tx3)',marginBottom:8,letterSpacing:'0.07em',textTransform:'uppercase'}},'Seller\'s Expected Price'),
+          h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:18}),type:'number',value:data.customer_expectation,onChange:function(e){set('customer_expectation',e.target.value);},placeholder:'What is the seller asking? e.g. 1200000'}),
+          data.customer_expectation&&parseInt(data.customer_expectation)>0 && h('div',{style:{fontSize:13,color:'var(--pur)',fontFamily:'monospace',fontWeight:600,marginTop:6}},'Seller expects: '+fmtL(data.customer_expectation))
+        ),
+        // Evaluator price
+        h('div',{style:{background:'var(--sur2)',border:'2px solid var(--acc)',borderRadius:'var(--r2)',padding:'18px',marginBottom:18}},
+          h('div',{style:{fontSize:11,fontWeight:700,color:'var(--acc)',marginBottom:10,letterSpacing:'0.07em',textTransform:'uppercase'}},'Step 1 — Your Estimated Purchase Price *'),
+          h('input',{style:Object.assign({},inpStyle,{fontFamily:'monospace',fontSize:22,padding:'13px'}),type:'number',value:data.price,onChange:function(e){set('price',e.target.value);},placeholder:'Enter your price in ₹ e.g. 850000'}),
+          data.price && h('div',{style:{marginTop:8,fontSize:14,fontWeight:700,color:'var(--grn)',fontFamily:'monospace'}},'= '+fmtL(data.price)),
+          h('div',{style:{marginTop:8,fontSize:11,color:'var(--tx3)'}},'💡 Enter based on inspection and market knowledge — do not wait for algorithm.')
+        ),
+        // Algorithm reveal
+        data.price&&algo && h('div',{className:'algo-box'},
+          h('div',{style:{fontSize:14,fontWeight:700,marginBottom:4}},'🧮 Algorithm Result'),
+          h('div',{style:{fontSize:11,color:'var(--tx3)',marginBottom:14}},'Calculated from IDV, age, volume, odometer, condition'),
+          algo.steps.map(function(s,i){
+            return h('div',{key:i,className:'algo-row'},
+              h('span',{className:'algo-key'},s.label),
+              h('span',{className:'algo-val',style:{color:s.type==='result'?'var(--acc)':s.type==='minus'?'var(--red)':'var(--grn)'}},
+                s.type==='base'?fmt(s.val):s.type==='result'?fmtL(s.val):(s.val>=0?'+':'')+fmt(s.val)
+              )
+            );
+          }),
+          h('div',{style:{marginTop:12,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
+            h('div',{style:{textAlign:'center'}},
+              h('div',{style:{fontSize:10,color:'var(--tx3)',fontFamily:'monospace',marginBottom:4}},'YOUR ESTIMATE'),
+              h('div',{style:{fontSize:20,fontWeight:800,color:'var(--grn)'}},fmtL(data.price))
+            ),
+            h('div',{style:{textAlign:'center'}},
+              h('div',{style:{fontSize:10,color:'var(--tx3)',fontFamily:'monospace',marginBottom:4}},'ALGORITHM'),
+              h('div',{style:{fontSize:20,fontWeight:800,color:'var(--acc)'}},fmtL(algo.price))
+            )
+          ),
+          priceDiff!==null && h('div',{style:{marginTop:8,textAlign:'center',fontSize:12,fontWeight:600,color:Math.abs(priceDiff)<=5?'var(--grn)':Math.abs(priceDiff)<=15?'var(--acc)':'var(--red)'}},
+            Math.abs(priceDiff)<=5?'✓ Very close to algorithm':'⚡ '+Math.round(Math.abs(priceDiff))+'% '+(priceDiff>0?'above':'below')+' algorithm — Incharge will review'
+          )
+        ),
+        !data.price && h('div',{style:{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:14,fontSize:12,color:'var(--tx3)'}},'Enter your price above to see algorithm comparison'),
+        h('div',{style:{background:'var(--adim)',border:'1px solid rgba(245,166,35,0.2)',borderRadius:'var(--r)',padding:'10px 13px',fontSize:12,color:'var(--acc)',marginTop:8}},'🔒 Your price is an estimate. Utrust Incharge sets the final approved price.')
+      );
+    }
+
+    if (step===7) {
+      var reviewItems=[
+        ['Registration',data.reg||'—'],['Seller',data.seller_name||'—'],
+        ['Vehicle',(fBrand||mBrand)+' '+(fModel||mModel)||'—'],['Year',fYear||data.year||'—'],
+        ['Fuel',data.fuel||'—'],['Volume',data.volume_cc?data.volume_cc+'cc':'—'],
+        ['Odometer',data.odometer?parseInt(data.odometer).toLocaleString('en-IN')+' km':'—'],
+        ['RC',data.docs.rc?'✓ '+data.docs.rc.name:'⚠ Not uploaded'],
+        ['Insurance',data.docs.insurance?'✓ '+data.docs.insurance.name:'⚠ Not uploaded'],
+        ['Photos',photoDone+'/8 captured'],
+        ['Challans',data.challan_verified===true?('⚠ ₹'+(data.challan_amount||0)):data.challan_verified===false?'No Challans':'Not Checked'],
+        ['Seller Expects',data.customer_expectation?fmtL(data.customer_expectation):'—'],
+        ['Your Price',fmtL(data.price)]
+      ];
+      return h('div',{className:'fcard'},
+        h('div',{className:'fcard-ttl'},'✅ Review & Submit'),
+        h('div',{className:'fcard-sub'},'Verify before sending for Incharge approval'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}},
+          reviewItems.map(function(item){
+            var isWarn=item[1].startsWith('⚠');
+            return h('div',{key:item[0],style:{padding:'9px 11px',background:'var(--sur2)',borderRadius:'var(--r)',border:'1px solid var(--bdr)'}},
+              h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',letterSpacing:'0.07em',textTransform:'uppercase'}},item[0]),
+              h('div',{style:{fontSize:12,fontWeight:600,marginTop:2,color:isWarn?'var(--red)':'var(--txt)',wordBreak:'break-word'}},item[1])
+            );
+          })
+        ),
+        h('div',{style:{background:'var(--adim)',border:'1px solid rgba(245,166,35,0.25)',borderRadius:'var(--r)',padding:12,fontSize:12,color:'var(--acc)'}},'🚀 Submitting sends to Utrust Incharge for review and price approval.')
+      );
+    }
+    return null;
+  }
+
+  return h('div',{style:{maxWidth:860}},
+    h('div',{className:'steps'},
+      stepNames.map(function(name,i){
+        return h('div',{key:i,className:'step'+(i===step?' active':i<step?' done':''),onClick:function(){if(i<step)setStep(i);}},
+          h('span',{className:'step-n'},i<step?'✓':i+1),
+          name
+        );
+      })
+    ),
+    renderStep(),
+    h('div',{style:{display:'flex',justifyContent:'space-between',gap:10,marginTop:8}},
+      h('button',{className:'btn btn-ghost',onClick:function(){step===0?props.onCancel():setStep(step-1);}},step===0?'Cancel':'← Back'),
+      h('div',{style:{display:'flex',gap:8}},
+        h('button',{className:'btn btn-ghost',onClick:function(){handleSubmit(true);}},'💾 Draft'),
+        step<7
+          ? h('button',{className:'btn btn-acc',onClick:function(){setStep(step+1);}},'Next →')
+          : h('button',{className:'btn btn-acc btn-lg',onClick:function(){handleSubmit(false);}},'🚀 Submit for Approval')
+      )
+    )
+  );
+}
+
+// ── VEHICLE DETAIL ────────────────────────────────────
+function VehicleDetail(props) {
+  var vehicle=props.vehicle; var user=props.user;
+  var _comment=useState(''); var comment=_comment[0]; var setComment=_comment[1];
+  var _ap=useState(''); var approvedPrice=_ap[0]; var setApprovedPrice=_ap[1];
+  var _modal=useState(null); var modal=_modal[0]; var setModal=_modal[1];
+  if (!vehicle) return h('div',{style:{textAlign:'center',padding:60,color:'var(--tx3)'}},'No vehicle selected');
+  var pm=vehicle.photos||{};
+  var photoKeys=['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var photoLabels={front:'FRONT',rear:'REAR',left:'LEFT',right:'RIGHT',interior1:'INT-1',interior2:'INT-2',engine:'ENGINE',chassis:'CHASSIS'};
+  var algo=calcAlgo(vehicle.idv,vehicle.purchase_value,vehicle.year,vehicle.insurance_expired,vehicle.accidental,vehicle.claim_history,vehicle.odometer,vehicle.engine,vehicle.fuel,vehicle.challan_amount,vehicle.volume_cc);
+  var canApprove=(user.role==='leader'||user.role==='admin')&&(vehicle.status==='pending'||vehicle.status==='review');
+  return h('div',null,
+    h('div',{style:{display:'flex',alignItems:'flex-start',gap:10,marginBottom:18,flexWrap:'wrap'}},
+      h('button',{className:'btn btn-ghost btn-sm',onClick:props.onBack},'← Back'),
+      h('div',{style:{flex:1}},
+        h('div',{style:{fontFamily:'monospace',color:'var(--acc)',fontSize:12}},vehicle.reg+' · '+vehicle.branch),
+        h('div',{style:{fontSize:18,fontWeight:800,letterSpacing:'-0.01em'}},vehicle.brand+' '+vehicle.model+' '+vehicle.variant)
+      ),
+      h('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}},
+        h(StatusBadge,{status:vehicle.status}),
+        canApprove && h('button',{className:'btn btn-success btn-sm',onClick:function(){setModal('approve');}},'✓ Approve'),
+        canApprove && h('button',{className:'btn btn-danger btn-sm',onClick:function(){setModal('reject');}},'✗ Reject'),
+        h('button',{className:'btn btn-ghost btn-sm',style:{color:'var(--acc)'},onClick:function(){genCustomerPDF(vehicle);}},'📱 Customer'),
+        h('button',{className:'btn btn-ghost btn-sm',style:{color:'var(--blu)'},onClick:function(){genVendorPDF(vehicle);}},'🏪 Vendor'),
+        h('button',{className:'btn btn-acc btn-sm',onClick:function(){genInternalPDF(vehicle,algo);}},'📄 Internal')
+      )
+    ),
+    h('div',{className:'detail-grid'},
+      h('div',null,
+        h('div',{className:'detail-card',style:{marginBottom:14}},
+          h('div',{className:'detail-card-ttl'},'🚗 Vehicle'),
+          [['Reg',vehicle.reg],['Seller',vehicle.seller_name||'—'],['Phone',vehicle.seller_phone||'—'],['Brand',vehicle.brand],['Model',vehicle.model],['Variant',vehicle.variant||'—'],['Year',vehicle.year],['Fuel',vehicle.fuel],['Volume',vehicle.volume_cc?vehicle.volume_cc+'cc':'—'],['Transmission',vehicle.transmission],['Odometer',(vehicle.odometer||0).toLocaleString('en-IN')+' km'],['Ownership',vehicle.ownership],['Branch',vehicle.branch],['Evaluator',vehicle.officer]].map(function(item){
+            return h('div',{key:item[0],className:'drow'},h('span',{className:'dkey'},item[0]),h('span',{className:'dval'},item[1]||'—'));
+          })
+        ),
+        h('div',{className:'detail-card'},
+          h('div',{className:'detail-card-ttl'},'💰 Pricing'),
+          vehicle.customer_expectation>0 && h('div',{style:{marginBottom:10,padding:'8px 10px',background:'var(--sur2)',borderRadius:'var(--r)',border:'1px solid var(--bdr)',textAlign:'center'}},
+            h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace'}},'SELLER EXPECTS'),
+            h('div',{style:{fontSize:16,fontWeight:700,color:'var(--pur)'}},fmtL(vehicle.customer_expectation))
+          ),
+          h('div',{style:{textAlign:'center',padding:'12px 0'}},
+            h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',marginBottom:3}},'EVALUATOR ESTIMATE'),
+            h('div',{style:{fontSize:22,fontWeight:800,color:'var(--acc)'}},fmtL(vehicle.price)),
+            vehicle.algo_price>0 && h('div',{style:{fontSize:11,color:'var(--tx3)',marginTop:3}},'Algorithm: ',h('b',{style:{color:'var(--tx2)'}},fmtL(vehicle.algo_price))),
+            vehicle.approved_price>0 && h('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid var(--bdr)'}},
+              h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',marginBottom:3}},'INCHARGE APPROVED'),
+              h('div',{style:{fontSize:22,fontWeight:800,color:'var(--grn)'}},fmtL(vehicle.approved_price))
+            )
+          ),
+          (user.role==='leader'||user.role==='admin')&&vehicle.status==='approved' && h('div',{style:{marginTop:8}},
+            h('div',{style:{fontSize:10,color:'var(--tx3)',marginBottom:5,fontFamily:'monospace',letterSpacing:'0.06em',textTransform:'uppercase'}},'Update Approved Price'),
+            h('div',{style:{display:'flex',gap:6}},
+              h('input',{type:'number',placeholder:'New price...',style:Object.assign({},{ flex:1,background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontFamily:'monospace',fontSize:13,outline:'none'}),onChange:function(e){setApprovedPrice(e.target.value);}}),
+              h('button',{className:'btn btn-success btn-sm',onClick:function(){props.onUpdatePrice(vehicle.id,parseInt(approvedPrice));}}, 'Set')
+            )
+          )
+        )
+      ),
+      h('div',null,
+        h('div',{className:'detail-card',style:{marginBottom:14}},
+          h('div',{className:'detail-card-ttl'},'📷 Photos'),
+          h('div',{className:'photo-grid'},
+            photoKeys.map(function(k){
+              var src=pm[k];
+              return h('div',{key:k},
+                h('div',{className:'photo-thumb',onClick:function(){if(src){var w=window.open('','_blank');w.document.write('<img src="'+src+'" style="max-width:100%;max-height:100vh">');w.document.close();}}},
+                  src?h('img',{src:src,alt:k,style:{width:'100%',height:'100%',objectFit:'cover'}}):h('span',{style:{fontSize:16,opacity:0.3}},'📷')
+                ),
+                h('div',{style:{fontSize:9,color:src?'var(--grn)':'var(--tx3)',textAlign:'center',marginTop:3,fontFamily:'monospace'}},photoLabels[k]+(src?' ✓':''))
+              );
+            })
+          )
+        ),
+        h('div',{className:'detail-card',style:{marginBottom:14}},
+          h('div',{className:'detail-card-ttl'},'🔍 Condition'),
+          [['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood],['Challans',vehicle.challan_verified===true?('⚠ ₹'+(vehicle.challan_amount||0)):vehicle.challan_verified===false?'No Challans':'Not Checked'],['Rating',(vehicle.rating||0)+'/10']].map(function(item){
+            var bad=item[1]==='Worn'||item[1]==='Dead'||item[1]==='Issues'||item[1]==='Yes'||item[1]==='Poor'||String(item[1]).startsWith('⚠');
+            var good=item[1]==='Excellent'||item[1]==='Good'||item[1]==='No'||item[1]==='No Challans';
+            return h('div',{key:item[0],className:'drow'},h('span',{className:'dkey'},item[0]),h('span',{className:'dval',style:{color:bad?'var(--red)':good?'var(--grn)':'var(--acc)'}},item[1]||'—'));
+          }),
+          vehicle.remarks && h('div',{style:{marginTop:8,padding:'8px 10px',background:'var(--sur2)',borderRadius:'var(--r)',fontSize:12,color:'var(--tx2)',fontStyle:'italic'}},'"'+vehicle.remarks+'"')
+        ),
+        h('div',{className:'detail-card'},
+          h('div',{className:'detail-card-ttl'},'📋 Documents'),
+          [['RC',vehicle.docs&&vehicle.docs.rc],['Insurance',vehicle.docs&&vehicle.docs.insurance],['PUC',vehicle.docs&&vehicle.docs.pollution]].map(function(item){
+            return h('div',{key:item[0],className:'drow'},h('span',{className:'dkey'},item[0]),h('span',{className:'dval',style:{color:item[1]?'var(--grn)':'var(--tx3)',fontSize:11}},item[1]?('✓ '+item[1].name):'Not uploaded'));
+          })
+        )
+      )
+    ),
+    modal && h(Modal,{title:modal==='approve'?'Approve Vehicle':'Reject Vehicle',sub:vehicle.brand+' '+vehicle.model+' — '+vehicle.reg,onClose:function(){setModal(null);}},
+      modal==='approve' && h('div',null,
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)',marginBottom:14}},
+          h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'monospace'}},'EVALUATOR'),h('div',{style:{fontSize:18,fontWeight:800,color:'var(--acc)'}},fmtL(vehicle.price))),
+          h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'monospace'}},'ALGORITHM'),h('div',{style:{fontSize:18,fontWeight:800,color:'var(--tx2)'}},algo?fmtL(algo.price):'—'))
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Final Approved Price (₹) *'),
+          h('input',{type:'number',value:approvedPrice,onChange:function(e){setApprovedPrice(e.target.value);},placeholder:'e.g. '+vehicle.price,style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontFamily:'monospace',fontSize:18,outline:'none'}}),
+          approvedPrice && h('div',{style:{fontSize:11,color:'var(--grn)',marginTop:4}},'= '+fmtL(approvedPrice))
+        )
+      ),
+      h('div',{className:'field'},
+        h('label',null,'Comments'),
+        h('textarea',{rows:2,value:comment,onChange:function(e){setComment(e.target.value);},placeholder:modal==='approve'?'Notes...':'Reason for rejection...',style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',resize:'vertical',fontFamily:'inherit'}})
+      ),
+      h('div',{className:'modal-acts'},
+        h('button',{className:'btn btn-ghost',onClick:function(){setModal(null);}},'Cancel'),
+        h('button',{className:'btn '+(modal==='approve'?'btn-success':'btn-danger'),onClick:function(){
+          if(modal==='approve')props.onApprove(vehicle.id,comment,parseInt(approvedPrice)||vehicle.price);
+          else props.onReject(vehicle.id,comment);
+          setModal(null);setComment('');setApprovedPrice('');
+        }},modal==='approve'?'✓ Approve':'✗ Reject')
+      )
+    )
+  );
+}
+
+// ── APPROVALS ─────────────────────────────────────────
+function Approvals(props) {
+  var vs=props.vehicles;
+  var pending=vs.filter(function(v){return v.status==='pending'||v.status==='review';});
+  var _comment=useState(''); var comment=_comment[0]; var setComment=_comment[1];
+  var _price=useState(''); var price=_price[0]; var setPrice=_price[1];
+  var _active=useState(null); var active=_active[0]; var setActive=_active[1];
+  var _action=useState(null); var action=_action[0]; var setAction=_action[1];
+  return h('div',null,
+    h('div',{style:{marginBottom:14,color:'var(--tx3)',fontSize:13}},pending.length+' inspection'+(pending.length!==1?'s':'')+' pending review'),
+    pending.length===0 && h('div',{style:{textAlign:'center',padding:60,color:'var(--tx3)'}},
+      h('div',{style:{fontSize:44,marginBottom:14}},'✅'),
+      h('div',{style:{fontSize:17,fontWeight:700,color:'var(--tx2)'}},'All caught up!')
+    ),
+    pending.map(function(v){
+      var algoR=calcAlgo(v.idv,v.purchase_value,v.year,v.insurance_expired,v.accidental,v.claim_history,v.odometer,v.engine,v.fuel,v.challan_amount,v.volume_cc);
+      return h('div',{key:v.id,className:'card',style:{padding:16,marginBottom:12}},
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}},
+          h('div',{style:{flex:1,minWidth:200}},
+            h('div',{style:{fontFamily:'monospace',color:'var(--acc)',fontSize:12,marginBottom:3}},v.reg+' · '+v.branch),
+            h('div',{style:{fontSize:15,fontWeight:700,marginBottom:7}},v.brand+' '+v.model+' '+v.variant,' ',h('span',{style:{color:'var(--tx3)',fontWeight:400,fontSize:13}},v.year)),
+            h('div',{style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}},
+              [v.fuel,v.transmission,(v.odometer||0).toLocaleString('en-IN')+' km',v.ownership+' Owner','★ '+v.rating+'/10'].map(function(t,i){
+                return h('span',{key:i,style:{padding:'2px 7px',borderRadius:4,background:'var(--sur2)',border:'1px solid var(--bdr)',fontSize:10,color:'var(--tx3)',fontFamily:'monospace'}},t);
+              }),
+              v.accidental==='Yes' && h('span',{style:{padding:'2px 7px',borderRadius:4,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',fontSize:10,color:'var(--red)',fontFamily:'monospace'}},'⚠ Accidental'),
+              v.challan_verified&&v.challan_amount>0 && h('span',{style:{padding:'2px 7px',borderRadius:4,background:'var(--rdim)',border:'1px solid rgba(239,68,68,0.3)',fontSize:10,color:'var(--red)',fontFamily:'monospace'}},'🚔 Challan ₹'+Number(v.challan_amount).toLocaleString('en-IN'))
+            ),
+            h('div',{style:{display:'flex',gap:16,alignItems:'baseline'}},
+              h('div',null,h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',marginBottom:2}},'EVALUATOR'),h('div',{style:{fontSize:17,fontWeight:800,color:'var(--grn)'}},fmtL(v.price))),
+              algoR && h('div',null,h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',marginBottom:2}},'ALGORITHM'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--acc)'}},fmtL(algoR.price))),
+              v.customer_expectation>0 && h('div',null,h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',marginBottom:2}},'SELLER ASKS'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--pur)'}},fmtL(v.customer_expectation)))
+            ),
+            h('div',{style:{fontSize:10,color:'var(--tx3)',marginTop:5}},'Submitted by '+v.officer+' on '+v.submitted+(v.seller_name?' · Seller: '+v.seller_name:''))
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:7}},
+            h('button',{className:'btn btn-ghost btn-sm',onClick:function(){props.setSelectedVehicle(v);props.setPage('detail');}},'👁 Details'),
+            h('button',{className:'btn btn-success btn-sm',onClick:function(){setActive(v);setAction('approve');}},'✓ Approve'),
+            h('button',{className:'btn btn-danger btn-sm',onClick:function(){setActive(v);setAction('reject');}},'✗ Reject')
+          )
+        )
+      );
+    }),
+    active && h(Modal,{title:action==='approve'?'Approve & Set Price':'Reject Inspection',sub:active.brand+' '+active.model+' — '+active.reg,onClose:function(){setActive(null);}},
+      action==='approve' && h('div',null,
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,padding:'12px',background:'var(--sur2)',borderRadius:'var(--r)',marginBottom:14}},
+          h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'monospace'}},'EVALUATOR'),h('div',{style:{fontSize:16,fontWeight:800,color:'var(--acc)'}},fmtL(active.price))),
+          h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'monospace'}},'ALGORITHM'),h('div',{style:{fontSize:16,fontWeight:800,color:'var(--tx2)'}},active.algo_price?fmtL(active.algo_price):'—')),
+          h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:9,color:'var(--tx3)',marginBottom:3,fontFamily:'monospace'}},'SELLER ASKS'),h('div',{style:{fontSize:16,fontWeight:800,color:'var(--pur)'}},active.customer_expectation?fmtL(active.customer_expectation):'—'))
+        ),
+        h('div',{className:'field'},
+          h('label',null,'Final Approved Price (₹) *'),
+          h('input',{type:'number',value:price,onChange:function(e){setPrice(e.target.value);},placeholder:'e.g. '+active.price,style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--acc)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontFamily:'monospace',fontSize:18,outline:'none'}}),
+          price && h('div',{style:{fontSize:11,color:'var(--grn)',marginTop:4}},'= '+fmtL(price))
+        )
+      ),
+      h('div',{className:'field'},
+        h('label',null,'Comments'),
+        h('textarea',{rows:2,value:comment,onChange:function(e){setComment(e.target.value);},placeholder:action==='approve'?'Notes...':'Reason for rejection...',style:{width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',resize:'vertical',fontFamily:'inherit'}})
+      ),
+      h('div',{className:'modal-acts'},
+        h('button',{className:'btn btn-ghost',onClick:function(){setActive(null);}},'Cancel'),
+        h('button',{className:'btn '+(action==='approve'?'btn-success':'btn-danger'),onClick:function(){
+          if(action==='approve')props.onApprove(active.id,comment,parseInt(price)||active.price);
+          else props.onReject(active.id,comment);
+          setActive(null);setComment('');setPrice('');
+        }},action==='approve'?'✓ Confirm Approval':'✗ Reject')
+      )
+    )
+  );
+}
+
+// ── MIS ────────────────────────────────────────────────
+function MIS(props) {
+  var vs=props.vehicles;
+  var _tab=useState('overview'); var tab=_tab[0]; var setTab=_tab[1];
+  var _bf=useState('all'); var branchF=_bf[0]; var setBranchF=_bf[1];
+  var fv=branchF==='all'?vs:vs.filter(function(v){return v.branch===branchF;});
+  var total=fv.length;
+  var appr=fv.filter(function(v){return v.status==='approved';});
+  var rejt=fv.filter(function(v){return v.status==='rejected';});
+  var pend=fv.filter(function(v){return v.status==='pending'||v.status==='review';});
+  var withAll=appr.filter(function(v){return v.price>0&&v.algo_price>0&&v.approved_price>0;});
+  var avgEval=withAll.length?withAll.reduce(function(a,v){return a+v.price;},0)/withAll.length:0;
+  var avgAlgo=withAll.length?withAll.reduce(function(a,v){return a+v.algo_price;},0)/withAll.length:0;
+  var avgAppr=withAll.length?withAll.reduce(function(a,v){return a+v.approved_price;},0)/withAll.length:0;
+  var evalMap={};
+  fv.forEach(function(v){
+    if(!v.officer)return;
+    if(!evalMap[v.officer])evalMap[v.officer]={name:v.officer,branch:v.branch,total:0,appr:0,rejt:0,evalSum:0,algoSum:0,cnt:0};
+    var e=evalMap[v.officer]; e.total++;
+    if(v.status==='approved')e.appr++;
+    if(v.status==='rejected')e.rejt++;
+    if(v.price>0&&v.algo_price>0){e.evalSum+=v.price;e.algoSum+=v.algo_price;e.cnt++;}
+  });
+  var evalList=Object.values(evalMap).sort(function(a,b){return b.total-a.total;});
+  var bStats=BRANCHES.map(function(b){var bv=vs.filter(function(v){return v.branch===b;});return{branch:b,total:bv.length,appr:bv.filter(function(v){return v.status==='approved';}).length,rejt:bv.filter(function(v){return v.status==='rejected';}).length};}).filter(function(b){return b.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var maxB=bStats.reduce(function(m,b){return Math.max(m,b.total);},1);
+
+  return h('div',null,
+    h('div',{style:{display:'flex',gap:10,marginBottom:18,flexWrap:'wrap',alignItems:'center'}},
+      h('div',{style:{fontSize:16,fontWeight:700,flex:1}},'MIS Dashboard'),
+      h('select',{value:branchF,onChange:function(e){setBranchF(e.target.value);},style:{background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'7px 11px',color:'var(--txt)',fontSize:13,outline:'none',fontFamily:'inherit'}},
+        h('option',{value:'all'},'All Branches'),
+        BRANCHES.map(function(b){return h('option',{key:b},b);})
+      )
+    ),
+    h('div',{className:'tabs'},
+      [['overview','📊 Overview'],['evaluators','👥 Evaluators'],['pricing','💰 Price Analysis'],['branches','🗺 Branches']].map(function(t){
+        return h('div',{key:t[0],className:'tab'+(tab===t[0]?' active':''),onClick:function(){setTab(t[0]);}},t[1]);
+      })
+    ),
+    tab==='overview' && h('div',null,
+      h('div',{className:'sg',style:{marginBottom:20}},
+        [{l:'Total',v:total,i:'🚗'},{l:'Approved',v:appr.length,i:'✅',s:total?Math.round(appr.length/total*100)+'%':'-'},{l:'Rejected',v:rejt.length,i:'❌',s:total?Math.round(rejt.length/total*100)+'%':'-'},{l:'Pending',v:pend.length,i:'⏳'}].map(function(s,i){
+          return h('div',{key:i,className:'sc'},h('div',{className:'sc-lbl'},s.l),h('div',{className:'sc-val'},s.v),s.s&&h('div',{className:'sc-sub'},s.s),h('div',{className:'sc-ico'},s.i));
+        })
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}},
+        h('div',{className:'card',style:{padding:18}},
+          h('div',{style:{fontSize:14,fontWeight:700,marginBottom:16}},'Branch Activity'),
+          h('div',{className:'bar-chart'},bStats.map(function(b){return h(BarRow,{key:b.branch,label:b.branch,val:b.total,max:maxB,sub:b.appr+' approved',wide:true});}))
+        ),
+        h('div',{className:'card',style:{padding:18}},
+          h('div',{style:{fontSize:14,fontWeight:700,marginBottom:16}},'Status Split'),
+          h('div',{className:'bar-chart'},
+            [{l:'Approved',v:appr.length,c:'var(--grn)'},{l:'Rejected',v:rejt.length,c:'var(--red)'},{l:'Pending',v:pend.length,c:'var(--acc)'},{l:'Draft',v:fv.filter(function(v){return v.status==='draft';}).length,c:'var(--tx3)'}].map(function(b){
+              return h(BarRow,{key:b.l,label:b.l,val:b.v,max:total||1,color:b.c});
+            })
+          )
+        )
+      )
+    ),
+    tab==='evaluators' && h('div',null,
+      h('div',{className:'card'},
+        h('div',{className:'tbl-wrap'},
+          h('table',null,
+            h('thead',null,h('tr',null,['Evaluator','Branch','Total','Approved','Rate','Price Trend'].map(function(t){return h('th',{key:t},t);}))),
+            h('tbody',null,
+              evalList.length===0 && h('tr',null,h('td',{colSpan:6,style:{textAlign:'center',padding:36,color:'var(--tx3)'}},'No data yet')),
+              evalList.map(function(e){
+                var rate=e.total?Math.round(e.appr/e.total*100):0;
+                var avgEP=e.cnt?e.evalSum/e.cnt:0; var avgAP=e.cnt?e.algoSum/e.cnt:0;
+                var trend=avgEP&&avgAP?((avgEP-avgAP)/avgAP*100):null;
+                return h('tr',{key:e.name},
+                  h('td',{style:{fontWeight:600}},e.name),
+                  h('td',null,h('span',{className:'btag'},e.branch)),
+                  h('td',{style:{fontFamily:'monospace',fontWeight:700,textAlign:'center'}},e.total),
+                  h('td',{style:{color:'var(--grn)',fontFamily:'monospace',fontWeight:700,textAlign:'center'}},e.appr),
+                  h('td',{style:{textAlign:'center',fontWeight:700,color:rate>=70?'var(--grn)':rate>=50?'var(--acc)':'var(--red)'}},rate+'%'),
+                  h('td',{style:{textAlign:'center',fontSize:11,fontWeight:600,color:trend===null?'var(--tx3)':Math.abs(trend)<=5?'var(--grn)':Math.abs(trend)<=15?'var(--acc)':'var(--red)'}},
+                    trend!==null?((trend>0?'▲':'▼')+Math.abs(trend).toFixed(1)+'% vs algo'):'—'
+                  )
+                );
+              })
+            )
+          )
+        )
+      ),
+      h('div',{style:{marginTop:10,padding:'8px 12px',background:'var(--sur2)',borderRadius:'var(--r)',fontSize:11,color:'var(--tx3)'}},'▲ = evaluator quotes higher than algorithm · ▼ = lower · Green = within ±5%')
+    ),
+    tab==='pricing' && h('div',null,
+      h('div',{className:'sg',style:{marginBottom:16}},
+        [{l:'Avg Evaluator',v:fmtL(avgEval),i:'🧑'},{l:'Avg Algorithm',v:fmtL(avgAlgo),i:'🧮'},{l:'Avg Approved',v:fmtL(avgAppr),i:'✅'},{l:'Records',v:withAll.length,i:'📊'}].map(function(s,i){
+          return h('div',{key:i,className:'sc'},h('div',{className:'sc-lbl'},s.l),h('div',{className:'sc-val',style:{fontSize:18}},s.v),h('div',{className:'sc-ico'},s.i));
+        })
+      ),
+      withAll.length>0 ? h('div',{className:'card'},
+        h('div',{className:'tbl-wrap'},
+          h('table',null,
+            h('thead',null,h('tr',null,['Vehicle','Evaluator','Algorithm','Approved','Variance'].map(function(t){return h('th',{key:t},t);}))),
+            h('tbody',null,
+              withAll.slice(0,20).map(function(v){
+                var vPct=((v.price-v.algo_price)/v.algo_price*100);
+                return h('tr',{key:v.id},
+                  h('td',null,h('div',{style:{fontWeight:600}},v.brand+' '+v.model),h('div',{style:{fontSize:10,color:'var(--tx3)',fontFamily:'monospace'}},v.reg+' · '+v.branch)),
+                  h('td',{style:{fontFamily:'monospace',textAlign:'right'}},fmtL(v.price)),
+                  h('td',{style:{fontFamily:'monospace',textAlign:'right',color:'var(--tx3)'}},fmtL(v.algo_price)),
+                  h('td',{style:{fontFamily:'monospace',textAlign:'right',color:'var(--grn)',fontWeight:700}},fmtL(v.approved_price)),
+                  h('td',{style:{textAlign:'right',fontWeight:700,fontSize:12,color:Math.abs(vPct)<=5?'var(--grn)':Math.abs(vPct)<=15?'var(--acc)':'var(--red)'}},(vPct>0?'+':'')+vPct.toFixed(1)+'%')
+                );
+              })
+            )
+          )
+        )
+      ) : h('div',{style:{textAlign:'center',padding:40,color:'var(--tx3)'}},h('div',{style:{fontSize:32,marginBottom:12}},'📊'),h('div',{style:{fontWeight:700,color:'var(--tx2)'}},'No price comparison data yet'))
+    ),
+    tab==='branches' && h('div',null,
+      bStats.map(function(b){
+        var bv=vs.filter(function(v){return v.branch===b.branch;});
+        var avgP=b.appr>0?bv.filter(function(v){return v.status==='approved';}).reduce(function(a,v){return a+v.price;},0)/b.appr:0;
+        var rate=b.total?Math.round(b.appr/b.total*100):0;
+        return h('div',{key:b.branch,style:{background:'var(--sur)',border:'1px solid var(--bdr)',borderRadius:'var(--r2)',padding:'16px',marginBottom:12}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,marginBottom:10}},
+            h('div',null,h('div',{style:{fontSize:15,fontWeight:700}},'📍 '+b.branch),h('div',{style:{fontSize:11,color:'var(--tx3)',marginTop:2}},b.total+' inspections')),
+            h('div',{style:{display:'flex',gap:16,flexWrap:'wrap'}},
+              [['Total',b.total,'var(--txt)'],['Approved',b.appr,'var(--grn)'],['Rejected',b.rejt,'var(--red)'],['Rate',rate+'%','var(--acc)'],['Avg Price',fmtL(avgP),'var(--blu)']].map(function(item){
+                return h('div',{key:item[0],style:{textAlign:'center'}},
+                  h('div',{style:{fontSize:17,fontWeight:800,color:item[2]}},item[1]),
+                  h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',textTransform:'uppercase',letterSpacing:'0.06em'}},item[0])
+                );
+              })
+            )
+          ),
+          h('div',{style:{background:'var(--sur2)',borderRadius:4,overflow:'hidden',height:7,display:'flex',gap:1}},
+            [['approved','var(--grn)'],['rejected','var(--red)'],['pending','var(--acc)'],['draft','var(--tx3)']].map(function(pair){
+              var cnt=bv.filter(function(v){return v.status===pair[0];}).length;
+              var pct=b.total?cnt/b.total*100:0;
+              return pct>0?h('div',{key:pair[0],style:{width:pct+'%',background:pair[1],height:'100%'},title:pair[0]+': '+cnt}):null;
+            })
+          )
+        );
+      }),
+      bStats.length===0 && h('div',{style:{textAlign:'center',padding:40,color:'var(--tx3)'}},'No data yet')
+    )
+  );
+}
+
+// ── EMPLOYEE DB ───────────────────────────────────────
+function EmployeeDB(props) {
+  var _users=useState(function(){return CRED_LIST.slice();}); var users=_users[0]; var setUsers=_users[1];
+  var _modal=useState(null); var modal=_modal[0]; var setModal=_modal[1];
+  var _editing=useState(null); var editing=_editing[0]; var setEditing=_editing[1];
+  var _showPwd=useState({}); var showPwd=_showPwd[0]; var setShowPwd=_showPwd[1];
+  var _search=useState(''); var search=_search[0]; var setSearch=_search[1];
+  var _bf=useState('all'); var branchF=_bf[0]; var setBranchF=_bf[1];
+  var _form=useState({name:'',username:'',password:'Utrust@2025',role:'officer',branch:'Purnea',email:'',phone:''}); var form=_form[0]; var setForm=_form[1];
+  var BLIST=['Purnea','Bhagalpur','Forbesganj','Kishanganj','Katihar','Banka','Khagaria','Saharsa','Supaul','HQ','All Branches'];
+  function persist(list){saveCreds(list);setUsers(list.slice());}
+  function setF(k,v){setForm(function(p){return Object.assign({},p,{[k]:v});});}
+  function openAdd(){setForm({name:'',username:'',password:'Utrust@2025',role:'officer',branch:'Purnea',email:'',phone:''});setEditing(null);setModal('form');}
+  function openEdit(u){setForm(Object.assign({},u));setEditing(u.id);setModal('form');}
+  function save(){
+    if(!form.name.trim()||!form.username.trim()||!form.password.trim()){props.showToast('Name, username and password required','error');return;}
+    var dup=users.find(function(u){return u.username===form.username.trim()&&u.id!==editing;});
+    if(dup){props.showToast('Username "'+form.username+'" already exists','error');return;}
+    var clean=Object.assign({},form,{username:form.username.trim().toLowerCase(),name:form.name.trim(),avatar:form.name.trim().split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase()});
+    var newList;
+    if(editing){newList=users.map(function(u){return u.id===editing?Object.assign({},u,clean):u;});props.showToast(clean.name+' updated','success');}
+    else{newList=users.concat([Object.assign({},clean,{id:'U'+Date.now()})]);props.showToast(clean.name+' added','success');}
+    persist(newList);setModal(null);
+  }
+  function del(id){
+    if(id==='U001'){props.showToast('Cannot delete admin','error');return;}
+    var u=users.find(function(x){return x.id===id;});
+    if(!window.confirm('Remove '+u.name+'?'))return;
+    persist(users.filter(function(x){return x.id!==id;}));
+    props.showToast(u.name+' removed','info');
+  }
+  var filtered=users.filter(function(u){
+    var q=search.toLowerCase();
+    var ms=!q||u.name.toLowerCase().includes(q)||u.username.toLowerCase().includes(q)||(u.phone||'').includes(q);
+    var mb=branchF==='all'||u.branch===branchF;
+    return ms&&mb;
+  });
+  var iStyle={width:'100%',background:'var(--sur2)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'10px 13px',color:'var(--txt)',fontSize:14,outline:'none',fontFamily:'inherit'};
+  return h('div',null,
+    h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}},
+      h('div',{style:{color:'var(--tx3)',fontSize:13}},users.length+' employees'),
+      h('div',{style:{display:'flex',gap:8}},
+        h('button',{className:'btn btn-ghost btn-sm',style:{fontSize:11},onClick:function(){persist(DEFAULT_CREDS.slice());props.showToast('Reset to default team','info');}},'\u21BA Reset'),
+        h('button',{className:'btn btn-acc btn-sm',onClick:openAdd},'➕ Add')
+      )
+    ),
+    h('div',{style:{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}},
+      h('div',{className:'search-bar',style:{flex:1,minWidth:180}},
+        h('span',null,'🔍'),
+        h('input',{placeholder:'Search name, username, phone...',value:search,onChange:function(e){setSearch(e.target.value);},style:{background:'none',border:'none',outline:'none',color:'var(--txt)',fontSize:13,flex:1,fontFamily:'inherit'}})
+      ),
+      h('select',{value:branchF,onChange:function(e){setBranchF(e.target.value);},style:Object.assign({},iStyle,{width:'auto',padding:'8px 11px'})},
+        h('option',{value:'all'},'All Branches'),
+        BLIST.map(function(b){return h('option',{key:b},b);})
+      )
+    ),
+    ['admin','leader','officer'].map(function(role){
+      var roleUsers=filtered.filter(function(u){return u.role===role;});
+      if(!roleUsers.length)return null;
+      var roleLabel={admin:'Admin',leader:'Utrust Incharge',officer:'Evaluator'};
+      var roleColor={admin:'168,85,247',leader:'59,130,246',officer:'34,197,94'};
+      return h('div',{key:role,style:{marginBottom:22}},
+        h('div',{style:{fontSize:10,fontWeight:700,color:'var(--tx3)',fontFamily:'monospace',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8,paddingBottom:6,borderBottom:'1px solid var(--bdr)'}},roleLabel[role]+' ('+roleUsers.length+')'),
+        roleUsers.map(function(u){
+          var uv=props.vehicles.filter(function(v){return v.officerId===u.id;});
+          return h('div',{key:u.id,className:'user-card'},
+            h('div',{className:'av '+u.role,style:{width:38,height:38,fontSize:13}},u.avatar),
+            h('div',{style:{flex:1,minWidth:0}},
+              h('div',{style:{fontSize:13,fontWeight:600}},u.name),
+              h('div',{style:{display:'flex',gap:7,flexWrap:'wrap',marginTop:3}},
+                h('span',{style:{fontFamily:'monospace',fontSize:11,color:'var(--acc)'}},'@'+u.username),
+                u.phone&&h('span',{style:{fontSize:11,color:'var(--tx3)'}},'📞 '+u.phone),
+                u.branch&&h('span',{className:'btag'},'📍 '+u.branch)
+              ),
+              h('div',{style:{display:'flex',alignItems:'center',gap:5,marginTop:4}},
+                h('span',{style:{fontSize:10,color:'var(--tx3)'}},'pwd:'),
+                h('span',{style:{fontFamily:'monospace',fontSize:11,color:showPwd[u.id]?'var(--txt)':'var(--bdr2)'}},showPwd[u.id]?u.password:'●●●●●●●●'),
+                h('button',{style:{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'0 2px'},onClick:function(){setShowPwd(function(p){var n=Object.assign({},p);n[u.id]=!n[u.id];return n;});}},showPwd[u.id]?'🙈':'👁')
+              )
+            ),
+            h('span',{style:{background:'rgba('+roleColor[role]+',0.15)',color:'rgb('+roleColor[role]+')',border:'1px solid rgba('+roleColor[role]+',0.3)',fontSize:10,padding:'2px 8px',borderRadius:20,fontFamily:'monospace',flexShrink:0}},roleLabel[role].toUpperCase()),
+            u.role==='officer' && h('div',{style:{display:'flex',gap:14,flexShrink:0}},
+              [['Done',uv.length],['OK',uv.filter(function(v){return v.status==='approved';}).length]].map(function(s){
+                return h('div',{key:s[0],style:{textAlign:'center'}},h('div',{style:{fontSize:15,fontWeight:800}},s[1]),h('div',{style:{fontSize:9,color:'var(--tx3)',fontFamily:'monospace',textTransform:'uppercase'}},s[0]));
+              })
+            ),
+            h('div',{style:{display:'flex',gap:6,flexShrink:0}},
+              h('button',{className:'btn btn-ghost btn-sm',onClick:function(){openEdit(u);}},'✏️'),
+              u.id!=='U001'&&h('button',{className:'btn btn-danger btn-sm',onClick:function(){del(u.id);}},'\uD83D\uDDD1')
+            )
+          );
+        })
+      );
+    }),
+    modal==='form' && h(Modal,{title:editing?'Edit Employee':'Add Employee',sub:'Changes take effect immediately',onClose:function(){setModal(null);}},
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+        h('div',{className:'field s2'},h('label',null,'Full Name *'),h('input',{style:Object.assign({},iStyle,{gridColumn:'span 2'}),value:form.name,onChange:function(e){setF('name',e.target.value);},placeholder:'Employee full name'})),
+        h('div',{className:'field'},h('label',null,'Username *'),h('input',{style:iStyle,value:form.username,onChange:function(e){setF('username',e.target.value.toLowerCase());},placeholder:'e.g. ravi.purnea'})),
+        h('div',{className:'field'},h('label',null,'Password *'),h('input',{style:iStyle,value:form.password,onChange:function(e){setF('password',e.target.value);},placeholder:'Min 8 chars'})),
+        h('div',{className:'field'},h('label',null,'Role'),h('select',{style:iStyle,value:form.role,onChange:function(e){setF('role',e.target.value);}},h('option',{value:'officer'},'Evaluator'),h('option',{value:'leader'},'Utrust Incharge'),h('option',{value:'admin'},'Admin'))),
+        h('div',{className:'field'},h('label',null,'Branch'),h('select',{style:iStyle,value:form.branch,onChange:function(e){setF('branch',e.target.value);}},BLIST.map(function(b){return h('option',{key:b},b);}))),
+        h('div',{className:'field'},h('label',null,'Phone'),h('input',{style:iStyle,value:form.phone,onChange:function(e){setF('phone',e.target.value);},placeholder:'10-digit number'})),
+        h('div',{className:'field'},h('label',null,'Email'),h('input',{style:iStyle,value:form.email,onChange:function(e){setF('email',e.target.value);},placeholder:'email@utrust.in'}))
+      ),
+      h('div',{className:'modal-acts'},
+        h('button',{className:'btn btn-ghost',onClick:function(){setModal(null);}},'Cancel'),
+        h('button',{className:'btn btn-acc',onClick:save},editing?'Save Changes':'Add Employee')
+      )
+    )
+  );
+}
+
+// ── PDF GENERATORS ─────────────────────────────────────
+function genCustomerPDF(vehicle){
+  var pm=vehicle.photos||{};
+  var photoKeys=['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels={front:'Front',rear:'Rear',left:'Left Side',right:'Right Side',interior1:'Interior 1',interior2:'Interior 2',engine:'Engine Bay',chassis:'Chassis/VIN'};
+  var photosHtml=photoKeys.filter(function(k){return pm[k];}).map(function(k){return '<div><div style="aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid #eee"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:3px;color:#888">'+pLabels[k]+'</div></div>';}).join('');
+  var condHtml=[['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood]].map(function(p){var c=(p[1]==='Excellent'||p[1]==='Good'||p[1]==='No')?'#16a34a':(p[1]==='Yes'||p[1]==='Poor'||p[1]==='Worn'||p[1]==='Dead'||p[1]==='Issues')?'#dc2626':'#d97706';return'<tr><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#444">'+p[0]+'</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;font-weight:700;color:'+c+'">'+p[1]+'</td></tr>';}).join('');
+  var waMsg=encodeURIComponent('Dear Customer,\n\nThank you for getting your '+vehicle.brand+' '+vehicle.model+' ('+vehicle.year+') inspected with Utrust.\n\nEstimated Purchase Price: \u20B9'+(vehicle.price/100000).toFixed(2)+' Lakh (subject to Incharge approval).\n\nWe look forward to serving you!\n\u2014 '+vehicle.officer+'\nUtrust, Prakash Toyota — '+vehicle.branch+' Branch');
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Utrust Report — '+vehicle.reg+'</title><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff;color:#111;font-size:14px}.hdr{background:#0a0b0d;color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #f5a623}.body{padding:28px 32px}.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px}.price-banner{background:#0a0b0d;color:#fff;padding:22px;border-radius:12px;text-align:center;margin:20px 0}.wa-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 26px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin:4px}.print-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 26px;background:#f5a623;color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;margin:4px}table{width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden}th{background:#f8f9fa;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:#666}@media print{.no-print{display:none!important}}</style></head><body><div class="hdr"><div><div style="font-size:22px;font-weight:900">\uD83D\uDE97 Utrust</div><div style="font-size:10px;color:#888;margin-top:2px">Vehicle Assessment Report</div></div><div style="text-align:right"><div style="font-family:monospace;font-size:20px;color:#f5a623;font-weight:700">'+vehicle.reg+'</div><div style="font-size:11px;color:#888;margin-top:4px">\uD83D\uDCCD '+vehicle.branch+' · '+vehicle.submitted+'</div></div></div><div class="body"><div style="font-size:26px;font-weight:900;margin-bottom:5px">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div><div style="color:#666;margin-bottom:24px">'+vehicle.year+' · '+vehicle.fuel+' · '+vehicle.transmission+' · '+(vehicle.ownership||'')+' Owner · '+(vehicle.odometer||0).toLocaleString('en-IN')+' km'+(vehicle.volume_cc?' · '+vehicle.volume_cc+'cc':'')+'</div>'+(photosHtml?'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#999;border-bottom:2px solid #f5a623;padding-bottom:7px;margin-bottom:12px">Inspection Photos</div><div class="photos">'+photosHtml+'</div>':'')+'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#999;border-bottom:2px solid #f5a623;padding-bottom:7px;margin-bottom:12px">Condition Report</div><table><thead><tr><th>Component</th><th>Condition</th></tr></thead><tbody>'+condHtml+'</tbody></table><div class="price-banner"><div style="font-size:11px;color:#9aa3b8;letter-spacing:0.1em;text-transform:uppercase">Estimated Purchase Price</div><div style="font-size:36px;font-weight:900;color:#f5a623;margin:8px 0">\u20B9'+(vehicle.price/100000).toFixed(2)+' Lakh</div><div style="font-size:11px;color:#9aa3b8">Subject to final approval by Utrust Incharge</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:36px;padding-top:20px;border-top:1px solid #ddd"><div style="font-size:11px;color:#888">Evaluated by<br><b style="color:#111;font-size:13px">'+vehicle.officer+'</b><br>'+vehicle.branch+' Branch</div><div style="font-size:11px;color:#888">Customer Signature<br><br></div></div></div><div class="no-print" style="text-align:center;padding:18px;background:#f0f0f0;border-top:1px solid #ddd"><a href="https://wa.me/?text='+waMsg+'" target="_blank" class="wa-btn">\uD83D\uDCF1 Share via WhatsApp</a><button onclick="window.print()" class="print-btn">\uD83D\uDDB8 Print / Save PDF</button></div></body></html>');
+  w.document.close();
+}
+
+function genVendorPDF(vehicle){
+  var pm=vehicle.photos||{};
+  var photoKeys=['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels={front:'FRONT',rear:'REAR',left:'LEFT',right:'RIGHT',interior1:'INTERIOR 1',interior2:'INTERIOR 2',engine:'ENGINE BAY',chassis:'CHASSIS/VIN'};
+  var photos=photoKeys.map(function(k){return pm[k]?'<div><div style="aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid #e0e0e0"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:4px;color:#22c55e;font-weight:700">'+pLabels[k]+' ✓</div></div>':'<div><div style="aspect-ratio:4/3;background:#f5f5f5;border-radius:6px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center"><span style="font-size:22px;opacity:0.3">📷</span></div><div style="font-size:9px;text-align:center;margin-top:4px;color:#bbb">'+pLabels[k]+'</div></div>';}).join('');
+  var cond=[['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood],['Challans',vehicle.challan_verified===true?'⚠ ₹'+Number(vehicle.challan_amount||0).toLocaleString('en-IN'):vehicle.challan_verified===false?'None':'Not Checked']].map(function(p){var g=p[1]==='Excellent'||p[1]==='Good'||p[1]==='No'||p[1]==='None';var b=p[1]==='Yes'||p[1]==='Poor'||p[1]==='Worn'||p[1]==='Dead'||p[1]==='Issues'||String(p[1]).startsWith('⚠');var c=g?'#16a34a':b?'#dc2626':'#d97706';return'<div class="cond-row"><span>'+p[0]+'</span><span style="font-weight:700;color:'+c+'">'+p[1]+'</span></div>';}).join('');
+  var today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Utrust Vendor Report — '+vehicle.reg+'</title><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;background:#fff;color:#111;font-size:13px}.hdr{background:#0a0b0d;padding:22px 32px;border-bottom:3px solid #f5a623;display:flex;justify-content:space-between;align-items:center}.sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#888;border-bottom:2px solid #f5a623;padding-bottom:6px;margin:20px 0 12px}.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px}.info-box{background:#f8f9fa;border:1px solid #eee;border-radius:7px;padding:10px 12px}.info-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.07em;color:#888;margin-bottom:3px}.info-val{font-size:13px;font-weight:700}.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.cond-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px}.no-price{background:#f8f9fa;border:2px solid #e0e0e0;border-radius:10px;padding:18px 24px;text-align:center;margin:20px 0}.sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:30px}.sig-box{border-top:2px solid #333;padding-top:8px;font-size:10px;color:#666;line-height:1.8}@media print{button{display:none!important}}</style></head><body><div class="hdr"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;background:#f5a623;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">\uD83D\uDE97</div><div><div style="font-size:20px;font-weight:900;color:#fff">Utrust</div><div style="font-size:9px;color:#888;letter-spacing:0.1em">VEHICLE INSPECTION REPORT</div></div></div><div style="text-align:right"><div style="background:#f5a623;color:#000;font-size:9px;font-weight:800;padding:3px 10px;border-radius:4px;letter-spacing:0.08em;margin-bottom:6px">VENDOR COPY — NO PRICING</div><div style="font-family:monospace;font-size:18px;color:#f5a623;font-weight:700">'+vehicle.reg+'</div><div style="font-size:10px;color:#888;margin-top:3px">'+today+' · '+vehicle.branch+' Branch</div></div></div><div style="padding:24px 32px"><div style="font-size:26px;font-weight:900;margin-bottom:4px">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div><div style="color:#666;margin-bottom:20px">'+vehicle.year+' · '+vehicle.fuel+' · '+vehicle.transmission+' · '+(vehicle.ownership||'')+' Owner · '+(vehicle.odometer||0).toLocaleString('en-IN')+' km'+(vehicle.volume_cc?' · '+vehicle.volume_cc+'cc':'')+'</div><div class="sec">Vehicle Details</div><div class="info-grid"><div class="info-box"><div class="info-lbl">Registration</div><div class="info-val" style="font-family:monospace;color:#f5a623">'+vehicle.reg+'</div></div><div class="info-box"><div class="info-lbl">Year</div><div class="info-val">'+vehicle.year+'</div></div><div class="info-box"><div class="info-lbl">Fuel</div><div class="info-val">'+vehicle.fuel+'</div></div><div class="info-box"><div class="info-lbl">Engine Volume</div><div class="info-val">'+(vehicle.volume_cc?vehicle.volume_cc+'cc':'—')+'</div></div><div class="info-box"><div class="info-lbl">Transmission</div><div class="info-val">'+vehicle.transmission+'</div></div><div class="info-box"><div class="info-lbl">Ownership</div><div class="info-val">'+(vehicle.ownership||'')+' Owner</div></div></div><div class="sec">Condition</div>'+cond+'<div style="margin-top:10px;display:flex;align-items:center;gap:12px"><span style="font-size:10px;color:#888">OVERALL RATING</span><span style="font-size:24px;font-weight:900;color:#f5a623">'+(vehicle.rating||0)+'/10</span></div>'+(vehicle.remarks?'<div style="margin-top:10px;padding:10px 14px;background:#fffbf0;border-left:4px solid #f5a623;border-radius:0 6px 6px 0;font-size:12px"><b>Remarks:</b> '+vehicle.remarks+'</div>':'')+'<div class="sec">Inspection Photos</div><div class="photos">'+photos+'</div><div class="sec">Insurance Status</div><div style="display:flex;gap:12px"><div class="info-box" style="flex:1"><div class="info-lbl">Status</div><div class="info-val" style="color:'+(vehicle.insurance_expired?'#dc2626':'#16a34a')+'">'+(vehicle.insurance_expired?'❌ Expired':'✅ Active')+'</div></div>'+((!vehicle.insurance_expired)?'<div class="info-box" style="flex:1"><div class="info-lbl">OD Valid Until</div><div class="info-val">'+(vehicle.insurance_valid_od||'—')+'</div></div><div class="info-box" style="flex:1"><div class="info-lbl">TP Valid Until</div><div class="info-val">'+(vehicle.insurance_valid_tp||'—')+'</div></div>':'')+'</div><div class="no-price"><div style="font-size:26px;margin-bottom:8px">🔒</div><div style="font-size:15px;font-weight:700;color:#444;margin-bottom:4px">Pricing Not Disclosed</div><div style="font-size:12px;color:#888">Condition reference only. Pricing managed exclusively by Prakash Toyota — Utrust Division.</div></div><div class="sig"><div class="sig-box">Inspected By<br><b style="color:#111">'+vehicle.officer+'</b><br>'+vehicle.branch+' Branch · '+vehicle.submitted+'</div><div class="sig-box">Vendor Representative<br><br><br>Signature & Stamp</div><div class="sig-box">Prakash Toyota — Utrust<br><br><br>Authorised Signatory</div></div></div><div style="background:#f8f9fa;padding:14px 32px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#888"><span>Utrust Vehicle Management · Prakash Toyota · Valid 7 days from inspection</span><span>'+today+'</span></div><div style="text-align:center;padding:14px"><button onclick="window.print()" style="padding:10px 24px;background:#f5a623;border:none;border-radius:7px;font-weight:700;cursor:pointer;font-size:13px">\uD83D\uDDB8 Print / Save PDF</button></div></body></html>');
+  w.document.close();
+}
+
+function genInternalPDF(vehicle,algo){
+  var pm=vehicle.photos||{};
+  var photoKeys=['front','rear','left','right','interior1','interior2','engine','chassis'];
+  var pLabels={front:'FRONT',rear:'REAR',left:'LEFT',right:'RIGHT',interior1:'INT-1',interior2:'INT-2',engine:'ENGINE',chassis:'CHASSIS'};
+  var photos=photoKeys.map(function(k){return pm[k]?'<div><div style="aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid #e0e0e0"><img src="'+pm[k]+'" style="width:100%;height:100%;object-fit:cover"/></div><div style="font-size:9px;text-align:center;margin-top:3px;color:#22c55e;font-weight:700">'+pLabels[k]+'</div></div>':'<div><div style="aspect-ratio:4/3;background:#f5f5f5;border-radius:6px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center"><span style="font-size:18px;opacity:0.3">📷</span></div><div style="font-size:9px;text-align:center;margin-top:3px;color:#aaa">'+pLabels[k]+'</div></div>';}).join('');
+  var algoHtml=algo?algo.steps.map(function(s){var c=s.type==='result'?'#f5a623':s.type==='minus'?'#ef4444':'#22c55e';var v=s.type==='base'?'\u20B9'+Math.round(s.val).toLocaleString('en-IN'):s.type==='result'?'\u20B9'+(s.val/100000).toFixed(2)+'L':(s.val>=0?'+':'')+'\u20B9'+Math.abs(Math.round(s.val)).toLocaleString('en-IN');return'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:11px"><span style="color:#666">'+s.label+'</span><span style="font-family:monospace;font-weight:600;color:'+c+'">'+v+'</span></div>';}).join(''):'';
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Utrust Internal — '+vehicle.reg+'</title><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#111;font-size:13px}.hdr{background:#0a0b0d;color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #f5a623}.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#888;border-bottom:2px solid #f5a623;padding-bottom:6px;margin:20px 0 12px}.price-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#0a0b0d;padding:18px;border-radius:12px;margin:16px 0;text-align:center}.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.cond-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:12px}.sig-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:32px}.sig-box{border-top:2px solid #333;padding-top:8px;font-size:10px;color:#666;line-height:1.8}@media print{button{display:none!important}}</style></head><body><div class="hdr"><div><div style="font-size:18px;font-weight:900">\uD83D\uDE97 Utrust — INTERNAL REPORT</div><div style="font-size:10px;color:#888;margin-top:2px">Confidential · Not for customer</div></div><div style="text-align:right"><div style="font-family:monospace;font-size:18px;color:#f5a623;font-weight:700">'+vehicle.reg+'</div><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(vehicle.status==='approved'?'#22c55e':vehicle.status==='rejected'?'#ef4444':'#f5a623')+';color:'+(vehicle.status==='approved'||vehicle.status==='rejected'?'#fff':'#000')+';margin-top:5px">'+vehicle.status.toUpperCase()+'</span></div></div><div style="padding:24px 32px"><div style="font-size:22px;font-weight:900;margin-bottom:3px">'+vehicle.brand+' '+vehicle.model+' '+vehicle.variant+'</div><div style="color:#666;margin-bottom:4px">'+vehicle.year+' · '+vehicle.fuel+' · '+vehicle.transmission+' · '+(vehicle.ownership||'')+' Owner · '+(vehicle.odometer||0).toLocaleString('en-IN')+' km'+(vehicle.volume_cc?' · '+vehicle.volume_cc+'cc':'')+'</div><div style="font-size:12px;color:#888">Evaluator: '+vehicle.officer+' · '+vehicle.branch+' · '+vehicle.submitted+(vehicle.seller_name?' · Seller: '+vehicle.seller_name:'')+'</div><div class="sec">Price Comparison</div><div class="price-row"><div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Evaluator Estimate</div><div style="font-size:20px;font-weight:900;color:#f5a623">\u20B9'+(vehicle.price/100000).toFixed(2)+'L</div>'+(vehicle.customer_expectation>0?'<div style="font-size:10px;color:#9aa3b8;margin-top:3px">Seller asks: \u20B9'+(vehicle.customer_expectation/100000).toFixed(2)+'L</div>':'')+'</div><div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Algorithm Suggested</div><div style="font-size:20px;font-weight:900;color:#9aa3b8">\u20B9'+((vehicle.algo_price||0)/100000).toFixed(2)+'L</div><div style="font-size:10px;color:#888;margin-top:3px">'+(vehicle.price&&vehicle.algo_price?((vehicle.price-vehicle.algo_price)/vehicle.algo_price*100).toFixed(1)+'% diff':'—')+'</div></div><div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Incharge Approved</div><div style="font-size:20px;font-weight:900;color:'+(vehicle.approved_price?'#22c55e':'#f5a623')+'">'+(vehicle.approved_price?'\u20B9'+(vehicle.approved_price/100000).toFixed(2)+'L':'Pending')+'</div></div></div>'+(vehicle.challan_amount>0?'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px"><b style="color:#dc2626">🚔 Pending Challans:</b> ₹'+Number(vehicle.challan_amount).toLocaleString('en-IN')+' ('+(vehicle.challan_details||'no details')+')</div>':'')+(algo?'<div class="sec">Algorithm Breakdown</div>'+algoHtml:'')+'<div class="sec">Photos</div><div class="photos">'+photos+'</div><div class="sec">Condition</div>'+[['Engine',vehicle.engine],['Tyres',vehicle.tyres],['Battery',vehicle.battery],['Electricals',vehicle.electricals],['Accidental',vehicle.accidental],['Flood',vehicle.flood],['Challans',vehicle.challan_verified===true?('⚠ ₹'+(vehicle.challan_amount||0)):vehicle.challan_verified===false?'No Challans':'Not Checked'],['Rating',(vehicle.rating||0)+'/10']].map(function(p){var g=p[1]==='Excellent'||p[1]==='Good'||p[1]==='No'||p[1]==='No Challans';var b=p[1]==='Yes'||p[1]==='Poor'||p[1]==='Worn'||p[1]==='Dead'||p[1]==='Issues'||String(p[1]).startsWith('⚠');return'<div class="cond-row"><span>'+p[0]+'</span><span style="font-weight:700;color:'+(b?'#ef4444':g?'#22c55e':'#d97706')+'">'+p[1]+'</span></div>';}).join('')+(vehicle.remarks?'<div style="margin-top:10px;padding:10px;background:#fffbf0;border-left:4px solid #f5a623;border-radius:0 6px 6px 0;font-size:12px"><b>Remarks:</b> '+vehicle.remarks+'</div>':'')+'<div class="sig-grid"><div class="sig-box">Evaluator<br><b>'+vehicle.officer+'</b></div><div class="sig-box">Incharge Approval<br><b>'+(vehicle.approved_price?'Approved':'Pending')+'</b></div><div class="sig-box">Dealer Stamp</div></div></div><div style="background:#f8f9fa;padding:12px 32px;text-align:center;font-size:10px;color:#888;border-top:1px solid #eee;margin-top:20px">Utrust Internal · CONFIDENTIAL · '+new Date().toLocaleString('en-IN')+'</div><div style="text-align:center;padding:14px"><button onclick="window.print()" style="padding:10px 24px;background:#f5a623;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">\uD83D\uDDB8 Print / Save PDF</button></div></body></html>');
+  w.document.close();
+}
+
+// ── APP ROOT ──────────────────────────────────────────
+function App() {
+  var _user=useState(null); var user=_user[0]; var setUser=_user[1];
+  var _page=useState('dash'); var page=_page[0]; var setPage=_page[1];
+  var _vehicles=useState(SAMPLE); var vehicles=_vehicles[0]; var setVehicles=_vehicles[1];
+  var _sel=useState(null); var selVehicle=_sel[0]; var setSelVehicle=_sel[1];
+  var _toast=useState(null); var toast=_toast[0]; var setToast=_toast[1];
+  var _dbLive=useState(false); var dbLive=_dbLive[0]; var setDbLive=_dbLive[1];
+  var _saving=useState(false); var saving=_saving[0]; var setSaving=_saving[1];
+
+  function showToast(msg,type){setToast({msg:msg,type:type||'success'});}
+
+  // Firestore listener
+  useEffect(function(){
+    if(!fbDb)return;
+    var unsub=FB.listen(function(docs){
+      setDbLive(true);
+      if(docs.length>0){
+        setVehicles(function(prev){
+          var fsIds=docs.map(function(d){return d.id;});
+          var localOnly=prev.filter(function(v){return v.id&&v.id.startsWith('V')&&!fsIds.includes(v.id);});
+          return localOnly.concat(docs);
+        });
+      }
+    });
+    return function(){if(unsub)unsub();};
+  },[]);
+
+  var pendingCount=vehicles.filter(function(v){return v.status==='pending'||v.status==='review';}).length;
+
+  function handleApprove(id,comment,approvedPrice){
+    var u={status:'approved',approved:new Date().toISOString().slice(0,10),approved_price:approvedPrice,approval_comment:comment};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,u):v;});});
+    if(selVehicle&&selVehicle.id===id)setSelVehicle(function(v){return Object.assign({},v,u);});
+    if(fbDb)FB.update(id,u).catch(function(e){console.error(e);});
+    showToast('Approved! Price set.','success');
+  }
+  function handleReject(id,comment){
+    var u={status:'rejected',rejection_comment:comment};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,u):v;});});
+    if(selVehicle&&selVehicle.id===id)setSelVehicle(function(v){return Object.assign({},v,u);});
+    if(fbDb)FB.update(id,u).catch(function(e){console.error(e);});
+    showToast('Inspection rejected','error');
+  }
+  function handleUpdatePrice(id,price){
+    var u={approved_price:price};
+    setVehicles(function(vs){return vs.map(function(v){return v.id===id?Object.assign({},v,u):v;});});
+    if(selVehicle&&selVehicle.id===id)setSelVehicle(function(v){return Object.assign({},v,u);});
+    if(fbDb)FB.update(id,u).catch(function(e){console.error(e);});
+    showToast('Price updated','success');
+  }
+  function handleDelete(id){
+    setVehicles(function(vs){return vs.filter(function(v){return v.id!==id;});});
+    if(fbDb)FB.del(id).catch(function(e){console.error(e);});
+    showToast('Deleted','info');
+  }
+  function handleNewVehicle(vehicle){
+    setSaving(true);
+    showToast('Saving...','info');
+    setVehicles(function(vs){return [vehicle].concat(vs);});
+    setPage('vehicles');
+    if(fbDb){
+      FB.save(vehicle).then(function(newId){
+        setVehicles(function(vs){return vs.map(function(v){return v.id===vehicle.id?Object.assign({},v,{id:newId}):v;});});
+        setSaving(false);
+        showToast(vehicle.status==='draft'?'✓ Draft saved!':'✓ Submitted for Incharge approval!','success');
+      }).catch(function(err){
+        setSaving(false);
+        var msg=err&&err.message?err.message:'';
+        if(msg.includes('permission')||msg.includes('PERMISSION_DENIED')){showToast('Firestore rules error — set allow read, write: if true in Firebase Console','error');}
+        else{showToast('Save issue: '+(msg||'check connection'),'error');}
+      });
+    } else {
+      setSaving(false);
+      showToast(vehicle.status==='draft'?'✓ Draft saved!':'✓ Submitted!','success');
+    }
+  }
+
+  var titles={dash:'Dashboard',vehicles:user&&user.role==='officer'?'My Inspections':'All Vehicles',add:'New Inspection',approval:'Pending Approvals',mis:'MIS Dashboard',users:'Employee Database',detail:'Vehicle Detail'};
+
+  if(!user) return h(Login,{onLogin:function(u){setUser(u);setPage('dash');}});
+
+  function renderPage(){
+    if(page==='dash') return h(Dashboard,{vehicles:vehicles,user:user,setPage:setPage});
+    if(page==='vehicles') return h(VehiclesList,{vehicles:vehicles,user:user,setPage:setPage,setSelectedVehicle:setSelVehicle,onAddNew:function(){setPage('add');},onDelete:handleDelete});
+    if(page==='add') return h(NewInspection,{user:user,onSubmit:handleNewVehicle,onCancel:function(){setPage('vehicles');},showToast:showToast});
+    if(page==='approval') return h(Approvals,{vehicles:vehicles,user:user,onApprove:handleApprove,onReject:handleReject,setPage:setPage,setSelectedVehicle:setSelVehicle});
+    if(page==='mis') return h(MIS,{vehicles:vehicles,user:user});
+    if(page==='users') return h(EmployeeDB,{vehicles:vehicles,showToast:showToast});
+    if(page==='detail') return h(VehicleDetail,{vehicle:selVehicle,user:user,onBack:function(){setPage('vehicles');},onApprove:handleApprove,onReject:handleReject,onUpdatePrice:handleUpdatePrice});
+    return h(Dashboard,{vehicles:vehicles,user:user,setPage:setPage});
+  }
+
+  return h('div',{style:{display:'flex',minHeight:'100vh',width:'100%'}},
+    h(Sidebar,{user:user,page:page,setPage:setPage,onLogout:function(){setUser(null);setPage('dash');},pendingCount:pendingCount}),
+    h('div',{className:'main'},
+      h('div',{className:'topbar'},
+        h('div',null,
+          h('div',{className:'tb-title'},titles[page]||'Utrust'),
+          h('div',{className:'tb-sub'},'Utrust Vehicle Management · '+user.branch)
+        ),
+        h('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:5,fontSize:10,fontFamily:'monospace',padding:'3px 8px',borderRadius:4,background:dbLive?'var(--gdim)':'var(--sur2)',border:'1px solid '+(dbLive?'rgba(34,197,94,0.3)':'var(--bdr)'),color:dbLive?'var(--grn)':'var(--tx3)'}},
+            h('div',{className:'db-dot',style:{background:dbLive?'var(--grn)':'var(--tx3)'}}),
+            saving?'Saving...':dbLive?'Cloud Live':'Local'
+          ),
+          page!=='add'&&(user.role==='officer'||user.role==='admin')&&h('button',{className:'btn btn-acc btn-sm',onClick:function(){setPage('add');}},'➕ New')
+        )
+      ),
+      h('div',{className:'content'},renderPage())
+    ),
+    toast&&h(Toast,{message:toast.msg,type:toast.type,onClose:function(){setToast(null);}})
+  );
+}
+
+function initApp(){
+  if(!window.React||!window.ReactDOM){
+    console.error('React not loaded');
+    document.getElementById('root').innerHTML='<div style="color:white;padding:60px;text-align:center;font-family:sans-serif;min-height:100vh;background:#0a0b0d;display:flex;flex-direction:column;align-items:center;justify-content:center"><h2>⚠️ Loading Error</h2><p style="color:#888;margin-top:8px">Please check your internet connection and reload.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#f5a623;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Reload</button></div>';
+    return;
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+}
+
+// Init - React should already be loaded by this point
+if(window.React&&window.ReactDOM){
+  initApp();
+} else {
+  window.addEventListener('load',function(){
+    setTimeout(initApp, 100);
+  });
+}
+</script>
+</body>
+</html>
