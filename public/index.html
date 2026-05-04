@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#B91C1C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>AutoCRM — Prakash Auto Hub</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --r:#B91C1C;--r2:#DC2626;--r3:#FEF2F2;--r4:#7F1D1D;
+  --g:#059669;--g2:#D1FAE5;--g3:#ECFDF5;
+  --a:#D97706;--a2:#FEF3C7;
+  --b:#2563EB;--b2:#DBEAFE;
+  --s:#7C3AED;--s2:#EDE9FE;
+  --k:#111827;--k2:#374151;--k3:#6B7280;--k4:#9CA3AF;--k5:#E5E7EB;--k6:#F3F4F6;--k7:#F9FAFB;
+  --w:#fff;
+  --ff:'Outfit',sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --sh2:0 4px 16px rgba(0,0,0,.12);
+  --r6:6px;--r10:10px;--r14:14px;--r20:20px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--ff);background:var(--k6);color:var(--k);font-size:14px;-webkit-font-smoothing:antialiased}
+
+/* ── SCREENS ── */
+.screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+
+/* ── LOGIN ── */
+#login-screen{background:linear-gradient(160deg,var(--r4) 0%,var(--r) 50%,#1E1E1E 100%);align-items:center;justify-content:center;padding:24px}
+.login-card{background:rgba(255,255,255,.07);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:32px 24px;width:100%;max-width:360px}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .icon{width:60px;height:60px;background:var(--r2);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:26px}
+.login-logo h1{font-size:22px;font-weight:800;color:white;letter-spacing:-.5px}
+.login-logo p{font-size:12px;color:rgba(255,255,255,.5);margin-top:3px}
+.login-field{margin-bottom:12px}
+.login-field label{font-size:11px;font-weight:600;color:rgba(255,255,255,.5);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.login-field input{width:100%;padding:12px 14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:white;font-size:15px;font-family:var(--ff)}
+.login-field input::placeholder{color:rgba(255,255,255,.3)}
+.login-field input:focus{outline:none;border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.15)}
+.login-btn{width:100%;padding:14px;background:var(--r2);border:none;border-radius:10px;color:white;font-size:15px;font-weight:700;font-family:var(--ff);cursor:pointer;margin-top:6px;transition:all .15s}
+.login-btn:active{transform:scale(.98);background:var(--r)}
+.login-err{color:#FCA5A5;font-size:12px;text-align:center;margin-top:8px}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--r);color:white;padding:12px 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:var(--sh2);padding-top:max(12px,env(safe-area-inset-top))}
+.topbar-back{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:18px}
+.topbar-title{flex:1;font-size:16px;font-weight:700;letter-spacing:-.2px}
+.topbar-action{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px;position:relative}
+.topbar-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--a);border-radius:50%;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--r)}
+
+/* ── SCROLL CONTENT ── */
+.scroll-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;padding-bottom:calc(80px + var(--safe-bottom))}
+.scroll-content.no-pad{padding:0;padding-bottom:calc(80px + var(--safe-bottom))}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--k5);display:flex;padding-bottom:var(--safe-bottom);z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px 8px;cursor:pointer;gap:3px;transition:all .15s}
+.nav-tab .nt-icon{font-size:20px;line-height:1}
+.nav-tab .nt-label{font-size:10px;font-weight:500;color:var(--k4)}
+.nav-tab.active .nt-label{color:var(--r);font-weight:700}
+.nav-tab .nt-badge{position:relative}
+.nav-tab .nt-dot{position:absolute;top:-2px;right:-6px;width:8px;height:8px;background:var(--r2);border-radius:50%;border:1.5px solid white}
+
+/* ── CARDS ── */
+.card{background:white;border-radius:var(--r14);box-shadow:var(--sh);margin-bottom:10px;overflow:hidden}
+.card-hd{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--k6)}
+.card-hd-title{font-size:13px;font-weight:700;color:var(--k)}
+.card-bd{padding:12px 14px}
+
+/* ── STAT CHIPS ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-box{background:white;border-radius:var(--r14);padding:14px;box-shadow:var(--sh)}
+.stat-label{font-size:10px;font-weight:600;color:var(--k4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:800;color:var(--k);letter-spacing:-.5px}
+.stat-sub{font-size:10.5px;margin-top:3px}
+
+/* ── PILLS ── */
+.pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.p-r{background:var(--r3);color:var(--r)}.p-g{background:var(--g3);color:var(--g)}.p-a{background:var(--a2);color:var(--a)}.p-b{background:var(--b2);color:var(--b)}.p-s{background:var(--s2);color:var(--s)}.p-k{background:var(--k6);color:var(--k3)}
+
+/* ── FORM ── */
+.form-section{margin-bottom:16px}
+.form-section-label{font-size:10px;font-weight:800;color:var(--k4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.form-section-label::after{content:'';flex:1;height:1px;background:var(--k5)}
+.fg{margin-bottom:10px}
+.fg label{font-size:11.5px;font-weight:600;color:var(--k3);display:block;margin-bottom:4px}
+.fc{width:100%;padding:11px 12px;border:1.5px solid var(--k5);border-radius:var(--r10);font-size:15px;font-family:var(--ff);color:var(--k);background:white;transition:border .15s;-webkit-appearance:none;appearance:none}
+.fc:focus{outline:none;border-color:var(--r);background:white}
+.fc.err{border-color:var(--r2)}
+select.fc{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236B7280' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 18px;border-radius:var(--r10);font-size:15px;font-weight:700;font-family:var(--ff);cursor:pointer;border:none;transition:all .15s;letter-spacing:-.1px}
+.btn:active{transform:scale(.97)}
+.btn-r{background:var(--r);color:white}.btn-r:active{background:var(--r2)}
+.btn-g{background:var(--g);color:white}
+.btn-o{background:white;color:var(--k2);border:1.5px solid var(--k5)}
+.btn-a{background:var(--a);color:white}
+.btn-full{width:100%}
+.btn-sm{padding:8px 12px;font-size:13px;border-radius:8px}
+
+/* ── STICKY FOOTER BTN ── */
+.sticky-btn{position:fixed;bottom:calc(66px + var(--safe-bottom));left:0;right:0;padding:10px 14px;background:rgba(249,250,251,.95);backdrop-filter:blur(8px);border-top:1px solid var(--k5);z-index:50}
+
+/* ── STEP NAV ── */
+.step-track{display:flex;align-items:center;padding:10px 14px;background:white;border-bottom:1px solid var(--k5);flex-shrink:0;overflow-x:auto;gap:0}
+.step-item{display:flex;align-items:center;gap:0;flex-shrink:0}
+.step-circle{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;transition:all .2s}
+.step-circle.done{background:var(--g);color:white}
+.step-circle.active{background:var(--r);color:white}
+.step-circle.todo{background:var(--k6);color:var(--k4)}
+.step-label{font-size:9.5px;font-weight:600;color:var(--k4);margin-left:4px;white-space:nowrap}
+.step-label.active{color:var(--r);font-weight:700}
+.step-line{width:20px;height:2px;background:var(--k5);margin:0 4px;flex-shrink:0}
+.step-line.done{background:var(--g)}
+
+/* ── PHOTO GRID ── */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.photo-slot{aspect-ratio:1;border-radius:var(--r10);overflow:hidden;position:relative;cursor:pointer}
+.photo-slot-empty{background:var(--k6);border:2px dashed var(--k5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .15s}
+.photo-slot-empty:active{background:var(--k5)}
+.photo-slot-empty .ph-icon{font-size:22px}
+.photo-slot-empty .ph-label{font-size:10px;font-weight:600;color:var(--k4);text-align:center;padding:0 4px;line-height:1.3}
+.photo-slot img{width:100%;height:100%;object-fit:cover}
+.photo-slot .ph-done{position:absolute;bottom:5px;right:5px;background:var(--g);color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.photo-slot .ph-del{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.5);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
+
+/* ── RATING STARS ── */
+.rating-wrap{display:flex;gap:6px;align-items:center}
+.rating-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--k5);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--k4)}
+.rating-dot.active-r{background:var(--r);border-color:var(--r);color:white}
+.rating-dot.active-a{background:var(--a);border-color:var(--a);color:white}
+.rating-dot.active-g{background:var(--g);border-color:var(--g);color:white}
+.rating-label{font-size:12px;font-weight:700;min-width:60px}
+
+/* ── CONDITION ROW ── */
+.cond-row{padding:12px 0;border-bottom:1px solid var(--k6)}
+.cond-row:last-child{border-bottom:none}
+.cond-row-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cond-name{font-size:13px;font-weight:700}
+.cond-sub{font-size:11px;color:var(--k4);margin-top:1px}
+.repair-chip{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;background:var(--a2);color:var(--a)}
+.repair-chip.zero{background:var(--g3);color:var(--g)}
+
+/* ── VAL ROWS ── */
+.vr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--k6)}
+.vr:last-child{border-bottom:none}
+.vr-k{font-size:12.5px;color:var(--k3)}
+.vr-v{font-size:13.5px;font-weight:800;letter-spacing:-.3px}
+
+/* ── APPROVAL CARD ── */
+.approval-item{background:white;border-radius:var(--r14);padding:14px;margin-bottom:10px;box-shadow:var(--sh);border-left:4px solid var(--a)}
+.approval-item.approved{border-left-color:var(--g)}
+.approval-item.rejected{border-left-color:var(--r)}
+
+/* ── INVENTORY ROW ── */
+.inv-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--k6);align-items:flex-start;cursor:pointer}
+.inv-row:last-child{border-bottom:none}
+.inv-row:active{background:var(--k7)}
+.inv-icon{width:42px;height:42px;border-radius:10px;background:var(--k6);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.inv-info{flex:1;min-width:0}
+.inv-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-meta{font-size:11px;color:var(--k4);margin-top:2px}
+.inv-price{text-align:right;flex-shrink:0}
+.inv-buy{font-size:13px;font-weight:800;color:var(--k)}
+.inv-margin{font-size:11px;font-weight:700;color:var(--g);margin-top:2px}
+
+/* ── ACTIVITY FEED ── */
+.feed-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--k6)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.feed-text{font-size:12.5px;color:var(--k);line-height:1.4}
+.feed-time{font-size:10.5px;color:var(--k4);margin-top:2px}
+
+/* ── CHECKLIST ── */
+.chk-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--k6)}
+.chk-row:last-child{border-bottom:none}
+.chk-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--k5);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chk-box.checked{background:var(--g);border-color:var(--g)}
+.chk-text{flex:1;font-size:13px}
+.chk-req{color:var(--r);font-weight:600}
+select.chk-sel{border:1.5px solid var(--k5);border-radius:7px;padding:4px 6px;font-size:11px;font-family:var(--ff);background:var(--k6);-webkit-appearance:none}
+
+/* ── MODAL / SHEET ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
+.sheet-overlay.open{display:flex}
+.sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding:0 0 calc(20px + var(--safe-bottom))}
+.sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 0}
+.sheet-hd h2{font-size:16px;font-weight:800}
+.sheet-close{width:30px;height:30px;background:var(--k6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+.sheet-drag{width:40px;height:4px;background:var(--k5);border-radius:2px;margin:10px auto 0}
+.sheet-bd{padding:14px 16px}
+
+/* ── TOAST ── */
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--k);color:white;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+
+/* ── EMPTY STATE ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:12px}
+.empty-icon{font-size:48px;opacity:.4}
+.empty-text{font-size:14px;color:var(--k4);text-align:center}
+
+/* ── SPINNER ── */
+.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SECTION DIVIDER ── */
+.sec-div{font-size:10px;font-weight:800;color:var(--k4);text-transform:uppercase;letter-spacing:.6px;padding:12px 14px 4px;background:var(--k7);border-bottom:1px solid var(--k6);border-top:1px solid var(--k6)}
+
+/* ── INS IMPACT ── */
+.ins-impact{background:var(--b2);border-radius:10px;padding:10px 12px;margin-top:6px;display:flex;gap:8px;align-items:flex-start}
+.ins-impact .icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.ins-impact p{font-size:12px;color:var(--b);line-height:1.4}
+
+/* ── RC SCAN BTN ── */
+.scan-btn{background:var(--b2);color:var(--b);border:1.5px dashed var(--b);border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--ff);font-size:13px;font-weight:700;width:100%;margin-bottom:10px}
+.scan-btn:active{background:var(--b)}
+
+/* ── PHOTO CAPTURE INPUT (hidden) ── */
+#photo-capture-input{position:absolute;left:-9999px;opacity:0;width:1px;height:1px}
+
+/* ── PRICE BAND ── */
+.price-band-wrap{margin:12px 0}
+.pb-track{height:12px;border-radius:6px;background:linear-gradient(to right,#FCA5A5,#86EFAC,#FCA5A5);position:relative;margin:6px 0}
+.pb-marker{position:absolute;top:-4px;width:20px;height:20px;border-radius:50%;background:var(--g);border:3px solid white;box-shadow:var(--sh);transform:translateX(-50%)}
+.pb-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--k4)}
+
+/* ── APPROVAL PRICE INPUT ── */
+.big-price{font-size:28px;font-weight:800;font-family:var(--ff);border:2.5px solid var(--k5);border-radius:12px;padding:12px 16px;text-align:center;color:var(--k);width:100%;letter-spacing:-1px}
+.big-price:focus{outline:none;border-color:var(--g)}
+
+/* ── SELLER DEAL SHEET ── */
+.deal-header{background:linear-gradient(135deg,var(--r),var(--r4));color:white;padding:20px 16px;margin:-0px;border-radius:20px 20px 0 0}
+
+/* ── DARK SECTION ── */
+.dark-card{background:var(--k);border-radius:var(--r14);padding:14px;margin-bottom:10px;color:white}
+.dark-card .card-hd-title{color:white}
+
+/* ── PROGRESS BARS ── */
+.prog{height:6px;background:var(--k5);border-radius:3px;overflow:hidden;margin-top:5px}
+.prog-fill{height:100%;border-radius:3px;transition:width .5s}
+
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="screen active" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">🚗</div>
+      <h1>AutoCRM</h1>
+      <p>Prakash Auto Hub · Used Cars</p>
+    </div>
+    <div class="login-field">
+      <label>Mobile Number</label>
+      <input type="tel" id="login-phone" placeholder="10-digit number" maxlength="10" inputmode="numeric">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+    <div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,.3);text-align:center">Demo: 9100000002 / AutoCRM@2026</div>
+  </div>
+</div>
+
+<!-- ═══ HOME / DASHBOARD ═══ -->
+<div class="screen" id="home-screen">
+  <div class="topbar">
+    <span class="topbar-title" id="home-greeting">Dashboard</span>
+    <div class="topbar-action" onclick="showSheet('notif-sheet')">🔔<div class="topbar-badge" id="notif-count">2</div></div>
+  </div>
+  <div class="scroll-content" id="home-content">
+    <!-- filled by JS -->
+    <div class="empty"><div class="spinner" style="border-color:rgba(0,0,0,.1);border-top-color:var(--r)"></div></div>
+  </div>
+</div>
+
+<!-- ═══ EVALUATE ═══ -->
+<div class="screen" id="eval-screen">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goHome()">←</div>
+    <span class="topbar-title">New Evaluation</span>
+    <div class="topbar-action" id="eval-step-save" style="display:none" onclick="saveEval()">💾</div>
+  </div>
+  <!-- Step Track -->
+  <div class="step-track" id="step-track"></div>
+  <!-- Step content -->
+  <div class="scroll-content" id="eval-content" style="padding-bottom:130px"></div>
+  <!-- Bottom nav for steps -->
+  <div class="sticky-btn" id="eval-foot">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-o" id="eval-prev" onclick="evalPrev()" style="flex:0 0 auto">← Back</button>
+      <button class="btn btn-r btn-full" id="eval-next" onclick="evalNext()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APPROVALS (Dilnawaz) ═══ -->
+<div class="screen" id="approval-screen">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goHome()">←</div>
+    <span class="topbar-title">Price Approvals</span>
+    <span class="pill p-a" id="approval-count-pill" style="font-size:11px">0</span>
+  </div>
+  <div class="scroll-content no-pad" id="approval-content"></div>
+</div>
+
+<!-- ═══ INVENTORY ═══ -->
+<div class="screen" id="inventory-screen">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goHome()">←</div>
+    <span class="topbar-title">Inventory</span>
+    <span id="inv-count-badge" class="pill p-b" style="font-size:11px">0</span>
+  </div>
+  <div style="padding:10px 14px;background:white;border-bottom:1px solid var(--k5);flex-shrink:0">
+    <input class="fc" id="inv-search" placeholder="🔍 Search car, reg no..." oninput="filterInventory()" style="margin-bottom:0">
+  </div>
+  <div class="scroll-content no-pad" id="inventory-content"></div>
+</div>
+
+<!-- ═══ PROCUREMENT / SELLER (post-approval) ═══ -->
+<div class="screen" id="procurement-screen">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goBack()">←</div>
+    <span class="topbar-title">Complete Purchase</span>
+  </div>
+  <div class="scroll-content" id="procurement-content"></div>
+</div>
+
+<!-- ═══ EVAL DETAIL (read-only) ═══ -->
+<div class="screen" id="eval-detail-screen">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goBack()">←</div>
+    <span class="topbar-title">Evaluation Detail</span>
+    <div class="topbar-action" id="eval-approve-btn" onclick="openApprovalSheet()" style="display:none">✓</div>
+  </div>
+  <div class="scroll-content" id="eval-detail-content"></div>
+</div>
+
+<!-- ═══ BOTTOM NAV ═══ -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <div class="nav-tab active" id="tab-home" onclick="switchTab('home')">
+    <div class="nt-icon">🏠</div><div class="nt-label">Home</div>
+  </div>
+  <div class="nav-tab" id="tab-eval" onclick="startEval()">
+    <div class="nt-icon nt-badge">🔍<span class="nt-dot" style="display:none" id="eval-dot"></span></div><div class="nt-label">Evaluate</div>
+  </div>
+  <div class="nav-tab" id="tab-approval" onclick="switchTab('approval')">
+    <div class="nt-icon nt-badge">✅<span class="nt-dot" id="approval-dot" style="display:none"></span></div><div class="nt-label">Approvals</div>
+  </div>
+  <div class="nav-tab" id="tab-inventory" onclick="switchTab('inventory')">
+    <div class="nt-icon">📦</div><div class="nt-label">Inventory</div>
+  </div>
+</nav>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<!-- ── NOTIFICATION SHEET ── -->
+<div class="sheet-overlay" id="notif-sheet" onclick="closeSheet('notif-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-drag"></div>
+    <div class="sheet-hd"><h2>Notifications</h2><div class="sheet-close" onclick="closeSheet('notif-sheet')">✕</div></div>
+    <div class="sheet-bd">
+      <div class="feed-item"><div class="feed-dot" style="background:var(--a2)">⏳</div><div><div class="feed-text"><b>Honda City 2020</b> awaiting your price approval</div><div class="feed-time">1 hour ago</div></div></div>
+      <div class="feed-item"><div class="feed-dot" style="background:var(--a2)">⏳</div><div><div class="feed-text"><b>Maruti Ertiga 2019</b> submitted by Ravi Kumar</div><div class="feed-time">3 hours ago</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APPROVAL SHEET (price decision) ── -->
+<div class="sheet-overlay" id="approval-sheet" onclick="closeSheet('approval-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()" id="approval-sheet-content">
+    <div class="sheet-drag"></div>
+    <div class="sheet-bd"></div>
+  </div>
+</div>
+
+<!-- ── PHOTO CAPTURE ── -->
+<input type="file" id="photo-capture-input" accept="image/*" onchange="photoSelected(event)">
+
+<!-- ── SELLER INFO SHEET (post-approval) ── -->
+<div class="sheet-overlay" id="seller-sheet" onclick="closeSheet('seller-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()" style="max-height:96vh">
+    <div class="sheet-drag"></div>
+    <div class="deal-header">
+      <div style="font-size:11px;font-weight:700;opacity:.6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Completing Purchase</div>
+      <div style="font-size:18px;font-weight:800" id="seller-sheet-car">—</div>
+      <div style="font-size:13px;opacity:.7;margin-top:2px" id="seller-sheet-price">—</div>
+    </div>
+    <div class="sheet-bd" id="seller-sheet-bd"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let S = {
+  user: null,
+  currentEvalId: null,
+  currentEvalData: null,
+  evalStep: 0,
+  evalForm: {
+    // Step 0 — vehicle
+    make:'', model:'', variant:'', variantCustom:'',
+    reg_year:'', reg_number:'', color:'', fuel:'Petrol', transmission:'Manual',
+    ownership:'1st', odometer:'',
+    insurance_status:'Valid', insurance_idv:'', insurance_expiry:'',
+    service_history:'Available (Full)',
+    // Step 1 — photos
+    photos: new Array(8).fill(null),
+    // Step 2 — condition
+    cond_exterior:3, cond_interior:3, cond_engine:3, cond_tyres:3, cond_electricals:3,
+    rem_exterior:'', rem_interior:'', rem_engine:'', rem_tyres:'', rem_electricals:'',
+    // Step 3 — valuation (calc server side)
+    evaluator_notes:'',
+  },
+  valResult: null,
+  currentPhotoSlot: null,
+  inventoryData: [],
+  pendingApprovals: [],
+  prevScreen: null,
+};
+
+const EVAL_STEPS = ['Vehicle', 'Photos', 'Condition', 'Valuation', 'Submit'];
+
+// ══════════════════════════════════════════════════════════════
+// CAR DATABASE
+// ══════════════════════════════════════════════════════════════
+const CAR_DB = {
+  "Maruti Suzuki":{"Alto 800":["Std","LXI","VXI","VXI+"],"Alto K10":["Std","LXI","VXI","VXI+ AMT"],"Swift":["LXI","VXI","ZXI","ZXI+","VXI AMT","ZXI AMT"],"Swift Dzire":["LXI","VXI","ZXI","ZXI+","VXI AMT"],"Baleno":["Sigma","Delta","Zeta","Alpha"],"Wagon R":["LXI","VXI","ZXI","VXI+"],"Ertiga":["LXI","VXI","ZXI","ZXI+"],"Brezza":["LXI","VXI","ZXI","ZXI+"],"Vitara Brezza":["LDi","VDi","ZDi","ZDi+"],"Ciaz":["Sigma","Delta","Zeta","Alpha"],"Ignis":["Sigma","Delta","Zeta","Alpha"],"Celerio":["LXI","VXI","ZXI"],"S-Presso":["Std","LXI","VXI"],"XL6":["Zeta","Alpha"],"Grand Vitara":["Sigma","Delta","Zeta","Alpha"],"Jimny":["Zeta","Alpha"],"Fronx":["Sigma","Delta","Zeta","Alpha"],"S-Cross":["Sigma","Delta","Zeta","Alpha"],"Eeco":["Std","AC"],"Omni":["Std"]},
+  "Hyundai":{"i10":["Era","Magna","Sportz","Asta"],"Grand i10":["Era","Magna","Sportz","Asta"],"Grand i10 Nios":["Era","Magna","Sportz","Asta"],"i20":["Era","Magna","Sportz","Asta","Sportz+","Asta(O)"],"Elite i20":["Era","Magna","Sportz","Asta"],"Xcent":["Base","S","SX","SX(O)"],"Aura":["E","S","SX","SX+"],"Verna":["E","EX","S","SX","SX(O)"],"Elantra":["S","SX","SX(O)"],"Creta":["E","EX","S","S+","SX","SX(O)","SX Tech"],"Venue":["E","S","SX","SX(O)","N Line"],"Alcazar":["Prestige","Platinum","Signature"],"Tucson":["GLS","GL","2WD"],"Santa Fe":["2WD","4WD"],"Exter":["EX","S","SX","SX(O)"],"Ioniq 5":["RWD","AWD"],"Kona Electric":["Base","Premium"]},
+  "Honda":{"Brio":["E","S","V","VX"],"Amaze":["E","S","V","VX"],"Jazz":["S","V","VX"],"City":["E","S","V","VX","ZX","S CVT","V CVT"],"WR-V":["S","V","VX"],"BR-V":["S","V","VX"],"Civic":["V","VX","ZX"],"CR-V":["2WD","4WD"],"Elevate":["S MT","V MT","V CVT","ZX CVT"]},
+  "Tata Motors":{"Nano":["Std","CX","LX"],"Indica":["DLE","DLS","GLX"],"Tiago":["XE","XM","XT","XZ","XZ+"],"Tiago EV":["XE","XM","XZ+"],"Tigor":["XE","XM","XT","XZ","XZ+"],"Tigor EV":["XM","XZ+"],"Nexon":["XE","XM","XT","XZ","XZ+","Creative","Fearless"],"Nexon EV":["XM","XZ+","XZ+ LUX","Max XZ+"],"Harrier":["XE","XM","XT","XZ","XZ+","XZA"],"Safari":["XE","XM","XT","XZ","XZ+","XZA+"],"Punch":["Pure","Adventure","Accomplished","Creative"],"Altroz":["XE","XM","XT","XZ","XZ+"],"Sumo":["Gold","Victa"],"Xenon":["Base","EX"],"Curvv EV":["Creative+","Empowered"]},
+  "Toyota":{"Etios":["J","G","V","GD"],"Etios Liva":["J","G","V"],"Glanza":["S","G","V"],"Yaris":["J","G","V","VX"],"Camry":["Std","Hybrid"],"Innova":["E","G","V","GX","VX"],"Innova Crysta":["G","GX","VX","ZX"],"Innova Hycross":["G","GX","VX","ZX","GX HEV","VX HEV"],"Fortuner":["2WD MT","2WD AT","4WD MT","4WD AT","Legender"],"Land Cruiser":["VX","300 GR Sport"],"Urban Cruiser":["Mid","High"],"Urban Cruiser Hyryder":["E","S","G","V","SHE","GHE","VHE"],"Rumion":["G","V","S"],"Prado":["VX","TX"],"Vellfire":["Std"]},
+  "Mahindra":{"Bolero":["SLX","SLE","ZLX","Power+"],"Bolero Neo":["N4","N8","N10"],"Scorpio":["S2","S4","S6","S8","S10","S11"],"Scorpio N":["Z2","Z4","Z6","Z8","Z8L"],"Scorpio Classic":["S","S11"],"XUV 500":["W3","W5","W7","W9","W11"],"XUV700":["MX","AX3","AX5","AX7","AX7L"],"XUV300":["W4","W6","W8","W8(O)"],"XUV400 EV":["EC Pro","EL Pro"],"TUV300":["T4","T6","T8","T10"],"KUV100":["K2","K4","K6","K8"],"Thar":["AX","LX","RWD"],"Thar Roxx":["MX1","MX3","MX5","AX7L"],"Verito":["D2","D4","D6"],"Marazzo":["M2","M4","M6","M8"],"Alturas G4":["2WD AT","4WD AT"]},
+  "Kia":{"Seltos":["HTE","HTK","HTK+","HTX","HTX+","GTX+"],"Sonet":["HTE","HTK","HTX","GTX+"],"Carens":["Premium","Prestige","Luxury"],"Carnival":["Premium","Prestige","Limousine"],"EV6":["RWD","AWD"],"Syros":["HTE","HTK","HTX"]},
+  "Renault":{"Kwid":["Std","RXE","RXL","RXT","Climber"],"Triber":["RXE","RXL","RXT","RXZ"],"Kiger":["RXE","RXL","RXT","RXZ"],"Duster":["RXE","RXL","RXT","AWD"],"Captur":["RXE","RXL","Platine"],"Scala":["RxE","RxL"],"Fluence":["E2","E4"]},
+  "Volkswagen":{"Polo":["Trendline","Comfortline","Highline","GT TSI"],"Vento":["Trendline","Comfortline","Highline","Highline Plus"],"Ameo":["Trendline","Comfortline","Highline"],"Taigun":["Trendline","Comfortline","Topline","GT"],"Virtus":["Comfortline","Highline","Topline","GT"],"Tiguan":["Comfortline","Highline"],"Passat":["Comfortline","Highline"]},
+  "Skoda":{"Fabia":["Classic","Ambiente","Elegance"],"Rapid":["Ambition","Elegance","Active","Monte Carlo"],"Kushaq":["Active","Ambition","Style","Monte Carlo"],"Slavia":["Active","Ambition","Style"],"Octavia":["Ambition","Elegance","RS"],"Superb":["L&K","Sportline"],"Kodiaq":["Ambition","Sportline"],"Kylaq":["Active","Signature"]},
+  "Ford":{"Figo":["Ambiente","Trend","Titanium"],"Aspire":["Ambiente","Trend","Titanium+"],"EcoSport":["Ambiente","Trend","Titanium","S","Thunder"],"Freestyle":["Ambiente","Trend","Titanium"],"Endeavour":["Trend","Titanium","Sport"],"Mustang":["Fastback GT"]},
+  "MG Motor":{"Hector":["Style","Super","Sharp","Savvy"],"ZS EV":["Excite","Exclusive"],"Gloster":["Super","Sharp"],"Astor":["Style","Super","Sharp"],"Comet EV":["Pace","Play","Plush"],"Windsor EV":["Excite","Exclusive"]},
+  "Jeep":{"Compass":["Sport","Longitude","Limited","Trailhawk"],"Meridian":["Longitude","Limited"],"Wrangler":["Sport","Sahara","Rubicon"],"Grand Cherokee":["Limited","Overland"]},
+  "Nissan":{"Micra":["XE","XL","XV"],"Sunny":["XE","XL","XV"],"Terrano":["XE","XL","XV"],"Kicks":["XL","XV","XV Premium"],"Magnite":["XE","XL","XV","XV Premium"]},
+  "BMW":{"1 Series":["Sport","M Sport"],"2 Series Gran Coupe":["Sport","M Sport"],"3 Series":["Sport","Luxury","M Sport"],"5 Series":["Luxury","M Sport"],"7 Series":["Base","DPE"],"X1":["sDrive20i","xLine","M Sport"],"X3":["xDrive20d","M Sport"],"X5":["xDrive30d","M50d"],"X7":["xDrive40i"],"i4":["M50","eDrive40"]},
+  "Mercedes-Benz":{"A-Class":["Progressive","AMG Line"],"C-Class":["Progressive","AMG Line"],"E-Class":["Progressive","AMG Line"],"S-Class":["S 400d","S 450"],"GLA":["200d","200"],"GLC":["220d","300"],"GLE":["300d","450"],"G-Class":["G 350d","G 63 AMG"]},
+  "Audi":{"A3":["35 TFSI","40 TFSI"],"A4":["35 TFSI","40 TFSI"],"A6":["45 TFSI","40 TDI"],"Q3":["35 TFSI","40 TFSI"],"Q5":["45 TFSI","40 TDI"],"Q7":["45 TFSI","45 TDI"],"e-tron":["55 quattro","GT"]},
+  "Volvo":{"S60":["R-Design","Inscription"],"S90":["D4","T6"],"XC40":["R-Design","Inscription","Recharge"],"XC60":["D5","T6","Inscription"],"XC90":["D5","T6"],"C40 Recharge":["Single Motor","Twin Motor"]},
+  "Isuzu":{"D-Max":["S","V-Cross","Hi-Lander"],"mu-X":["4x2","4x4"]},
+};
+
+const COND_ITEMS = [
+  {key:'exterior', label:'Exterior', sub:'Body, dents, scratches, paint', icon:'🚗'},
+  {key:'interior', label:'Interior', sub:'Seats, dashboard, trim', icon:'💺'},
+  {key:'engine',   label:'Engine & Mechanics', sub:'Engine, gearbox, suspension', icon:'⚙️'},
+  {key:'tyres',    label:'Tyres', sub:'Tread depth, wear, spare', icon:'🛞'},
+  {key:'electricals', label:'Electricals & AC', sub:'Battery, AC, lights, sensors', icon:'⚡'},
+];
+
+const REPAIR_TABLE = {
+  exterior:   [{c:5,l:0,p:0},{c:4,l:2000,p:500},{c:3,l:4000,p:2000},{c:2,l:8000,p:5000},{c:1,l:15000,p:10000}],
+  interior:   [{c:5,l:0,p:0},{c:4,l:1000,p:500},{c:3,l:3000,p:2000},{c:2,l:6000,p:4000},{c:1,l:12000,p:8000}],
+  engine:     [{c:5,l:0,p:0},{c:4,l:2000,p:1000},{c:3,l:3500,p:3000},{c:2,l:8000,p:6000},{c:1,l:18000,p:15000}],
+  tyres:      [{c:5,l:0,p:0},{c:4,l:1000,p:4000},{c:3,l:2000,p:8000},{c:2,l:2000,p:16000},{c:1,l:2000,p:22000}],
+  electricals:[{c:5,l:0,p:0},{c:4,l:500,p:500},{c:3,l:2000,p:3000},{c:2,l:5000,p:8000},{c:1,l:10000,p:15000}],
+};
+
+const COND_LABELS = {1:'Poor',2:'Worn',3:'Fair',4:'Good',5:'Excellent'};
+const COND_COLORS = {1:'var(--r)',2:'var(--r)',3:'var(--a)',4:'var(--g)',5:'var(--g)'};
+
+const PHOTO_SLOTS = ['Front View','Rear View','Left Side','Right Side','Dashboard','Odometer','Engine Bay','Boot / Luggage'];
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const fmt = n => '₹' + Math.abs(Math.round(n||0)).toLocaleString('en-IN');
+function toast(msg, dur=2500) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+function showSheet(id) { $(id).classList.add('open'); }
+function closeSheet(id) { $(id).classList.remove('open'); }
+
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+function calcRepair(form) {
+  let total = 0;
+  const bd = {};
+  for (const ci of COND_ITEMS) {
+    const rating = form[`cond_${ci.key}`] || 3;
+    const row = REPAIR_TABLE[ci.key].find(r => r.c === rating) || {l:0,p:0};
+    bd[ci.key] = {rating, labour:row.l, parts:row.p, total:row.l+row.p};
+    total += row.l + row.p;
+  }
+  return {total, breakdown:bd};
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════
+async function doLogin() {
+  const phone = $('login-phone').value.trim();
+  const pass = $('login-pass').value;
+  $('login-err').textContent = '';
+  if (!phone || !pass) { $('login-err').textContent = 'Enter mobile and password'; return; }
+  const r = await api('/api/login','POST',{phone,password:pass});
+  if (r.error) { $('login-err').textContent = r.error; return; }
+  S.user = r.user;
+  initApp();
+}
+
+async function checkAuth() {
+  try {
+    const r = await api('/api/me');
+    if (r.id) { S.user = r; initApp(); return; }
+  } catch {}
+  // stay on login
+}
+
+function initApp() {
+  // Show nav based on role
+  $('bottom-nav').style.display = 'flex';
+  // Show approval tab only for trust_ic / admin
+  const approvalTab = $('tab-approval');
+  if (!['admin','trust_ic'].includes(S.user.role)) {
+    approvalTab.style.display = 'none';
+  }
+  switchTab('home');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tabEl = $(`tab-${tab}`);
+  if (tabEl) tabEl.classList.add('active');
+  if (tab === 'home') { showScreen('home-screen'); loadDashboard(); }
+  else if (tab === 'approval') { showScreen('approval-screen'); loadApprovals(); }
+  else if (tab === 'inventory') { showScreen('inventory-screen'); loadInventory(); }
+}
+
+function goHome() { switchTab('home'); }
+function goBack() {
+  if (S.prevScreen) { showScreen(S.prevScreen); S.prevScreen = null; }
+  else goHome();
+}
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  $('home-greeting').textContent = `${greet}, ${S.user.name.split(' ')[0]}`;
+
+  const data = await api('/api/dashboard');
+  const evals = await api('/api/evaluations');
+  const myEvals = evals.filter(e => ['pending_approval','submitted'].includes(e.status)).slice(0,3);
+  const isApprover = ['admin','trust_ic'].includes(S.user.role);
+
+  // Update approval dot
+  if (data.pending_approval > 0 && isApprover) {
+    $('approval-dot').style.display = 'block';
+    $('notif-count').textContent = data.pending_approval;
+    $('approval-count-pill').textContent = data.pending_approval + ' Pending';
+  }
+
+  $('home-content').innerHTML = `
+    <div style="background:linear-gradient(135deg,var(--r),var(--r4));border-radius:16px;padding:16px;margin-bottom:12px;color:white">
+      <div style="font-size:11px;font-weight:700;opacity:.6;text-transform:uppercase;letter-spacing:.5px">${S.user.role === 'trust_ic' ? 'Trust Incharge' : S.user.role === 'admin' ? 'Admin' : 'Sales Executive'} · ${S.user.branch}</div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin:6px 0">${fmt(data.inventory_count * 650000)}</div>
+      <div style="font-size:12px;opacity:.7">${data.inventory_count} vehicles in stock · ${data.evals_today} evaluations today</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Evaluated Today</div><div class="stat-value">${data.evals_today}</div><div class="stat-sub"><span class="pill p-g">Active</span></div></div>
+      <div class="stat-box"><div class="stat-label">Pending Approval</div><div class="stat-value" style="color:${data.pending_approval>0?'var(--a)':'var(--g)'}">${data.pending_approval}</div><div class="stat-sub"><span class="pill ${data.pending_approval>0?'p-a':'p-g'}">${data.pending_approval>0?'Action needed':'All clear'}</span></div></div>
+      <div class="stat-box"><div class="stat-label">In Stock</div><div class="stat-value" style="color:var(--b)">${data.inventory_count}</div><div class="stat-sub"><span class="pill p-b">Vehicles</span></div></div>
+      <div class="stat-box"><div class="stat-label">Margin (Est.)</div><div class="stat-value" style="font-size:18px;color:var(--g)">₹38K</div><div class="stat-sub"><span class="pill p-g">Avg.</span></div></div>
+    </div>
+
+    ${isApprover && data.pending_approval > 0 ? `
+    <div class="card" style="border-left:4px solid var(--a)">
+      <div class="card-hd"><span class="card-hd-title">⏳ Awaiting Your Approval</span><span class="pill p-a">${data.pending_approval}</span></div>
+      ${data.evals_pending.slice(0,3).map(e => `
+        <div style="padding:10px 14px;border-bottom:1px solid var(--k6);display:flex;gap:10px;align-items:center;cursor:pointer" onclick="openEvalDetail(${e.id})">
+          <div style="font-size:22px">🚗</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">${e.make} ${e.model} ${e.variant||''} ${e.reg_year}</div>
+            <div style="font-size:11px;color:var(--k4)">${e.evaluator_name} · ${e.branch}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:800">${fmt(e.ideal_price)}</div>
+            <div class="pill p-a" style="font-size:10px">Review</div>
+          </div>
+        </div>`).join('')}
+      <div style="padding:10px 14px"><button class="btn btn-o btn-full btn-sm" onclick="switchTab('approval')">View All Pending →</button></div>
+    </div>` : ''}
+
+    ${myEvals.length > 0 ? `
+    <div class="card">
+      <div class="card-hd"><span class="card-hd-title">My Recent Evaluations</span></div>
+      ${myEvals.map(e => `
+        <div style="padding:10px 14px;border-bottom:1px solid var(--k6);display:flex;gap:10px;align-items:center;cursor:pointer" onclick="openEvalDetail(${e.id})">
+          <div style="font-size:22px">🚗</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">${e.make} ${e.model} ${e.reg_year}</div>
+            <div style="font-size:11px;color:var(--k4)">${e.reg_number||''} · ${e.odometer?.toLocaleString()||'?'} km</div>
+          </div>
+          <div><span class="pill ${e.status==='approved'?'p-g':e.status==='rejected'?'p-r':'p-a'}">${e.status==='pending_approval'?'Pending':e.status==='approved'?'Approved':'Sent back'}</span></div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-hd"><span class="card-hd-title">Quick Actions</span></div>
+      <div class="card-bd" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-r btn-full" onclick="startEval()">🔍 New Eval</button>
+        <button class="btn btn-o btn-full" onclick="switchTab('inventory')">📦 Inventory</button>
+        ${isApprover?`<button class="btn btn-o btn-full" onclick="switchTab('approval')">✅ Approvals</button>`:''}
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+// EVALUATION WIZARD
+// ══════════════════════════════════════════════════════════════
+function startEval() {
+  S.evalStep = 0;
+  S.evalForm = { make:'', model:'', variant:'', variantCustom:'', reg_year:'', reg_number:'', color:'', fuel:'Petrol', transmission:'Manual', ownership:'1st', odometer:'', insurance_status:'Valid', insurance_idv:'', insurance_expiry:'', service_history:'Available (Full)', photos: new Array(8).fill(null), cond_exterior:3, cond_interior:3, cond_engine:3, cond_tyres:3, cond_electricals:3, rem_exterior:'', rem_interior:'', rem_engine:'', rem_tyres:'', rem_electricals:'', evaluator_notes:'' };
+  S.valResult = null;
+  $('eval-step-save').style.display = 'none';
+  showScreen('eval-screen');
+  renderStepTrack();
+  renderEvalStep();
+}
+
+function renderStepTrack() {
+  const track = $('step-track');
+  track.innerHTML = EVAL_STEPS.map((name, i) => {
+    const state = i < S.evalStep ? 'done' : i === S.evalStep ? 'active' : 'todo';
+    return `<div class="step-item">
+      ${i > 0 ? `<div class="step-line ${i <= S.evalStep ? 'done' : ''}"></div>` : ''}
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="step-circle ${state}">${i < S.evalStep ? '✓' : i+1}</div>
+        <span class="step-label ${state==='active'?'active':''}">${name}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderEvalStep() {
+  const c = $('eval-content');
+  const prev = $('eval-prev');
+  const next = $('eval-next');
+  prev.style.display = S.evalStep === 0 ? 'none' : '';
+  next.textContent = S.evalStep === EVAL_STEPS.length - 1 ? '✓ Submit for Approval' : 'Next →';
+  next.className = `btn btn-full ${S.evalStep === EVAL_STEPS.length - 1 ? 'btn-g' : 'btn-r'}`;
+
+  if (S.evalStep === 0) renderStep0(c);
+  else if (S.evalStep === 1) renderStep1(c);
+  else if (S.evalStep === 2) renderStep2(c);
+  else if (S.evalStep === 3) renderStep3(c);
+  else if (S.evalStep === 4) renderStep4(c);
+}
+
+// ── STEP 0: Vehicle Details ──────────────────────────────────
+function renderStep0(c) {
+  const f = S.evalForm;
+  const makes = Object.keys(CAR_DB);
+  const models = f.make ? Object.keys(CAR_DB[f.make]) : [];
+  const variants = f.make && f.model ? [...(CAR_DB[f.make][f.model] || []), 'Other'] : ['Other'];
+
+  c.innerHTML = `
+  <div class="form-section">
+    <div class="form-section-label">🚗 Vehicle Identity</div>
+
+    <div class="fg">
+      <label>Make *</label>
+      <select class="fc" id="f-make" onchange="onMakeChange()">
+        <option value="">Select Make</option>
+        ${makes.map(m => `<option ${m===f.make?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="fg">
+      <label>Model *</label>
+      <select class="fc" id="f-model" onchange="onModelChange()" ${!f.make?'disabled':''}>
+        <option value="">Select Model</option>
+        ${models.map(m => `<option ${m===f.model?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="fg">
+      <label>Variant *</label>
+      <select class="fc" id="f-variant" onchange="onVariantChange()" ${!f.model?'disabled':''}>
+        <option value="">Select Variant</option>
+        ${variants.map(v => `<option ${v===f.variant?'selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>
+    ${f.variant === 'Other' ? `
+    <div class="fg">
+      <label>Specify Variant</label>
+      <input class="fc" id="f-variant-custom" value="${f.variantCustom}" placeholder="Type variant name" oninput="S.evalForm.variantCustom=this.value">
+    </div>` : ''}
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-label">📋 Registration Details</div>
+
+    <div class="fr">
+      <div class="fg">
+        <label>Reg. Year *</label>
+        <select class="fc" id="f-year">
+          <option value="">Year</option>
+          ${Array.from({length:16},(_,i)=>2025-i).map(y=>`<option ${y==f.reg_year?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Ownership</label>
+        <select class="fc" id="f-owner">
+          ${['1st','2nd','3rd','4th+'].map(o=>`<option ${o===f.ownership?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Registration No.</label>
+      <input class="fc" id="f-reg" value="${f.reg_number}" placeholder="e.g. BR-01-MN-2021" style="text-transform:uppercase" oninput="S.evalForm.reg_number=this.value.toUpperCase()">
+    </div>
+
+    <div style="background:var(--b2);border-radius:10px;padding:11px 12px;display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <span style="font-size:18px">📷</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--b)">Scan RC for Chassis & Engine No.</div>
+        <div style="font-size:11px;color:var(--b);opacity:.8">Tap to photograph the Registration Certificate</div>
+      </div>
+      <button class="btn btn-sm" style="background:var(--b);color:white;padding:8px 12px;font-size:12px" onclick="scanRC()">Scan RC</button>
+    </div>
+
+    <div class="fg">
+      <label>Color</label>
+      <input class="fc" id="f-color" value="${f.color}" placeholder="e.g. Pearl White" oninput="S.evalForm.color=this.value">
+    </div>
+
+    <div class="fr">
+      <div class="fg">
+        <label>Fuel Type *</label>
+        <select class="fc" id="f-fuel">
+          ${['Petrol','Diesel','CNG','EV','Hybrid','PHEV'].map(ft=>`<option ${ft===f.fuel?'selected':''}>${ft}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Transmission</label>
+        <select class="fc" id="f-trans">
+          ${['Manual','Automatic','AMT','CVT','DCT'].map(t=>`<option ${t===f.transmission?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Odometer Reading (km) *</label>
+      <input class="fc" id="f-odo" type="number" inputmode="numeric" value="${f.odometer}" placeholder="e.g. 38500" style="border-color:var(--b);font-size:18px;font-weight:700" oninput="S.evalForm.odometer=this.value">
+    </div>
+
+    <div class="fg">
+      <label>Service History</label>
+      <select class="fc" id="f-svc">
+        ${['Available (Full)','Available (Partial)','Not Available'].map(s=>`<option ${s===f.service_history?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-label">🛡️ Insurance (Affects Price)</div>
+    <div class="fg">
+      <label>Insurance Status *</label>
+      <select class="fc" id="f-ins-status" onchange="onInsChange()">
+        ${['Valid','Expired','Not Available'].map(s=>`<option ${s===f.insurance_status?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    ${f.insurance_status === 'Valid' ? `
+    <div class="fr">
+      <div class="fg">
+        <label>IDV Amount (₹) *</label>
+        <input class="fc" id="f-idv" type="number" inputmode="numeric" value="${f.insurance_idv}" placeholder="e.g. 480000" style="font-size:16px;font-weight:700" oninput="S.evalForm.insurance_idv=this.value">
+      </div>
+      <div class="fg">
+        <label>Expiry Date</label>
+        <input class="fc" id="f-ins-exp" type="date" value="${f.insurance_expiry}" oninput="S.evalForm.insurance_expiry=this.value">
+      </div>
+    </div>
+    <div class="ins-impact">
+      <span class="icon">ℹ️</span>
+      <p><b>IDV impact:</b> Higher IDV = better maintained vehicle = higher procurement price. IDV vs new price ratio adjusts the offer by ±₹8,000–₹10,000.</p>
+    </div>` : `
+    <div style="background:var(--a2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--a);font-weight:600">
+      ⚠️ ${f.insurance_status === 'Expired' ? 'Expired insurance will negatively impact the offer price.' : 'No insurance data — price calculated from market only.'}
+    </div>`}
+  </div>
+  `;
+}
+
+function onMakeChange() {
+  S.evalForm.make = $('f-make').value;
+  S.evalForm.model = '';
+  S.evalForm.variant = '';
+  renderEvalStep();
+}
+function onModelChange() {
+  S.evalForm.model = $('f-model').value;
+  S.evalForm.variant = '';
+  renderEvalStep();
+}
+function onVariantChange() { S.evalForm.variant = $('f-variant').value; renderEvalStep(); }
+function onInsChange() { S.evalForm.insurance_status = $('f-ins-status').value; renderEvalStep(); }
+
+function saveStep0() {
+  S.evalForm.make = $('f-make')?.value || S.evalForm.make;
+  S.evalForm.model = $('f-model')?.value || S.evalForm.model;
+  S.evalForm.variant = $('f-variant')?.value || S.evalForm.variant;
+  S.evalForm.reg_year = $('f-year')?.value || S.evalForm.reg_year;
+  S.evalForm.reg_number = $('f-reg')?.value || S.evalForm.reg_number;
+  S.evalForm.color = $('f-color')?.value || S.evalForm.color;
+  S.evalForm.fuel = $('f-fuel')?.value || S.evalForm.fuel;
+  S.evalForm.transmission = $('f-trans')?.value || S.evalForm.transmission;
+  S.evalForm.ownership = $('f-owner')?.value || S.evalForm.ownership;
+  S.evalForm.odometer = $('f-odo')?.value || S.evalForm.odometer;
+  S.evalForm.service_history = $('f-svc')?.value || S.evalForm.service_history;
+  S.evalForm.insurance_status = $('f-ins-status')?.value || S.evalForm.insurance_status;
+  S.evalForm.insurance_idv = $('f-idv')?.value || S.evalForm.insurance_idv;
+  S.evalForm.insurance_expiry = $('f-ins-exp')?.value || S.evalForm.insurance_expiry;
+  if (!S.evalForm.make || !S.evalForm.model) { toast('⚠ Select Make and Model'); return false; }
+  if (!S.evalForm.odometer) { toast('⚠ Odometer reading is required'); return false; }
+  return true;
+}
+
+function scanRC() {
+  // Trigger camera for RC scan — in production this would OCR the RC
+  S.currentPhotoSlot = 'rc';
+  const inp = $('photo-capture-input');
+  inp.setAttribute('capture', 'environment');
+  inp.click();
+  toast('📷 Photograph the RC — chassis & engine no. will be extracted');
+}
+
+// ── STEP 1: Photos ─────────────────────────────────────────
+function renderStep1(c) {
+  const photos = S.evalForm.photos;
+  c.innerHTML = `
+  <div style="padding:0 0 8px">
+    <div style="padding:12px 14px 6px;font-size:12px;color:var(--k3)">
+      Tap any slot to open camera or select from gallery.<br>
+      <span style="color:var(--r);font-weight:600">Front, Rear, Dashboard & Odometer are required.</span>
+    </div>
+    <div class="photo-grid" style="padding:6px 14px">
+      ${PHOTO_SLOTS.map((slot, i) => {
+        const photo = photos[i];
+        const required = i < 4;
+        return `<div class="photo-slot ${photo ? '' : 'photo-slot-empty'}" onclick="capturePhoto(${i})" id="pslot-${i}">
+          ${photo
+            ? `<img src="${photo}" alt="${slot}"><div class="ph-done">✓</div><div class="ph-del" onclick="event.stopPropagation();deletePhoto(${i})">✕</div>`
+            : `<div class="ph-icon">${i===4?'📊':i===5?'🔢':i===6?'⚙️':i===7?'🧳':'📷'}</div><div class="ph-label">${slot}${required?' *':''}</div>`
+          }
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="padding:4px 14px">
+      <div style="background:var(--k6);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--k3);display:flex;gap:8px">
+        <span>📍</span>
+        <span>GPS: <b>${S.user.branch}</b> · Photos auto-timestamped · ${photos.filter(Boolean).length}/8 uploaded</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function capturePhoto(slot) {
+  S.currentPhotoSlot = slot;
+  const inp = $('photo-capture-input');
+  // Allow both camera and gallery
+  inp.removeAttribute('capture');
+  inp.accept = 'image/*';
+  inp.click();
+}
+
+function photoSelected(event) {
+  const file = event.target.files[0];
+  if (!file || S.currentPhotoSlot === null) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    if (S.currentPhotoSlot === 'rc') {
+      // RC scan — just toast for now, OCR would go here
+      toast('✓ RC photographed — manual entry still required');
+      event.target.value = '';
+      return;
+    }
+    S.evalForm.photos[S.currentPhotoSlot] = dataUrl;
+    // Re-render only the changed slot
+    const slotEl = $(`pslot-${S.currentPhotoSlot}`);
+    if (slotEl) {
+      const i = S.currentPhotoSlot;
+      slotEl.className = 'photo-slot';
+      slotEl.innerHTML = `<img src="${dataUrl}" alt="${PHOTO_SLOTS[i]}" style="width:100%;height:100%;object-fit:cover"><div class="ph-done">✓</div><div class="ph-del" onclick="event.stopPropagation();deletePhoto(${i})">✕</div>`;
+    }
+    toast(`✓ ${PHOTO_SLOTS[S.currentPhotoSlot]} captured`);
+    event.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function deletePhoto(slot) {
+  S.evalForm.photos[slot] = null;
+  const slotEl = $(`pslot-${slot}`);
+  if (slotEl) {
+    slotEl.className = 'photo-slot photo-slot-empty';
+    const req = slot < 4;
+    slotEl.innerHTML = `<div class="ph-icon">📷</div><div class="ph-label">${PHOTO_SLOTS[slot]}${req?' *':''}</div>`;
+  }
+}
+
+// ── STEP 2: Condition ────────────────────────────────────────
+function renderStep2(c) {
+  const f = S.evalForm;
+  const repair = calcRepair(f);
+
+  c.innerHTML = `
+  <div style="padding:10px 14px 6px;background:white;margin-bottom:6px;border-radius:14px;margin:10px 0">
+    <div style="font-size:11px;font-weight:700;color:var(--k4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Rate each component 1–5</div>
+    ${COND_ITEMS.map(ci => {
+      const rating = f[`cond_${ci.key}`] || 3;
+      const repRow = repair.breakdown[ci.key];
+      const col = COND_COLORS[rating];
+      const lbl = COND_LABELS[rating];
+      return `
+      <div class="cond-row">
+        <div class="cond-row-hd">
+          <div>
+            <div class="cond-name">${ci.icon} ${ci.label}</div>
+            <div class="cond-sub">${ci.sub}</div>
+          </div>
+          <span class="repair-chip ${repRow.total===0?'zero':''}">${repRow.total===0?'✓ No repair':fmt(repRow.total)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+          <div class="rating-wrap">
+            ${[1,2,3,4,5].map(n => `
+              <div class="rating-dot ${n<=rating ? (rating<=2?'active-r':rating===3?'active-a':'active-g') : ''}"
+                   onclick="setCondRating('${ci.key}',${n})">${n}</div>`).join('')}
+          </div>
+          <span class="rating-label" style="color:${col};font-size:12px;font-weight:800">${lbl}</span>
+        </div>
+        <input class="fc" placeholder="Evaluator remarks (optional)..." style="font-size:12px;padding:8px 10px"
+          value="${f[`rem_${ci.key}`]||''}" oninput="S.evalForm['rem_${ci.key}']=this.value">
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="dark-card">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Total Repair Estimate</div>
+    ${Object.entries(repair.breakdown).filter(([,v])=>v.total>0).map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="font-size:12px;color:rgba(255,255,255,.6)">${COND_ITEMS.find(c=>c.key===k)?.label}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--a2)">${fmt(v.total)}</span>
+      </div>`).join('')}
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0">
+      <span style="font-size:14px;font-weight:800">Total Repair</span>
+      <span style="font-size:18px;font-weight:800;color:var(--a2)">${fmt(repair.total)}</span>
+    </div>
+  </div>`;
+}
+
+function setCondRating(key, val) {
+  S.evalForm[`cond_${key}`] = val;
+  renderEvalStep();
+}
+
+// ── STEP 3: Valuation ────────────────────────────────────────
+async function renderStep3(c) {
+  c.innerHTML = `<div class="empty"><div class="spinner" style="border-color:rgba(0,0,0,.1);border-top-color:var(--r)"></div><div class="empty-text">Calculating valuation...</div></div>`;
+
+  const f = S.evalForm;
+  const r = await api('/api/valuate','POST',{
+    make:f.make, model:f.model, reg_year:parseInt(f.reg_year)||2021,
+    odometer:parseInt(f.odometer)||0, insurance_idv:parseInt(f.insurance_idv)||0,
+    insurance_status:f.insurance_status, ownership:f.ownership,
+    cond_exterior:f.cond_exterior, cond_interior:f.cond_interior,
+    cond_engine:f.cond_engine, cond_tyres:f.cond_tyres, cond_electricals:f.cond_electricals,
+  });
+  S.valResult = r;
+
+  const pct = Math.min(90, Math.max(10, Math.round((r.ideal - r.min) / (r.max - r.min) * 100)));
+
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-hd-title">AI Valuation</span>
+      <span class="pill p-b">${f.make} ${f.model} ${f.reg_year}</span>
+    </div>
+    <div class="card-bd">
+      <div class="vr"><span class="vr-k">Market Base Price</span><span class="vr-v">${fmt(r.marketBase)}</span></div>
+      <div class="vr"><span class="vr-k">Km Adjustment</span><span class="vr-v" style="color:${r.kmAdj>=0?'var(--g)':'var(--r)'}">${r.kmAdj>=0?'+':''}${fmt(r.kmAdj)}</span></div>
+      ${r.idvAdj!==0?`<div class="vr"><span class="vr-k">Insurance IDV Adj.</span><span class="vr-v" style="color:${r.idvAdj>=0?'var(--g)':'var(--r)'}">${r.idvAdj>=0?'+':''}${fmt(r.idvAdj)}</span></div>`:''}
+      ${r.penalty!==0?`<div class="vr"><span class="vr-k">Ownership Penalty</span><span class="vr-v" style="color:var(--r)">${fmt(r.penalty)}</span></div>`:''}
+      <div class="vr"><span class="vr-k">Repair Deduction</span><span class="vr-v" style="color:var(--r)">−${fmt(r.repairTotal)}</span></div>
+      <div class="vr" style="border-top:2px solid var(--k5);padding-top:10px;margin-top:4px">
+        <span style="font-size:14px;font-weight:800">Ideal Procurement</span>
+        <span style="font-size:22px;font-weight:800;color:var(--g);letter-spacing:-1px">${fmt(r.ideal)}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-bd">
+      <div style="font-size:11px;font-weight:700;color:var(--k4);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Price Band</div>
+      <div class="pb-track"><div class="pb-marker" style="left:${pct}%"></div></div>
+      <div class="pb-labels"><span>Min ${fmt(r.min)}</span><span style="color:var(--g);font-weight:700">Ideal ${fmt(r.ideal)}</span><span>Max ${fmt(r.max)}</span></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+    <div style="background:var(--g3);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Resale Potential</div>
+      <div style="font-size:20px;font-weight:800;color:var(--g)">${fmt(r.resale)}</div>
+    </div>
+    <div style="background:var(--b2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--b);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Expected Margin</div>
+      <div style="font-size:20px;font-weight:800;color:var(--b)">${fmt(r.margin)}</div>
+    </div>
+  </div>
+
+  <div style="background:${r.margin>40000?'var(--g3)':'var(--r3)'};border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:${r.margin>40000?'var(--g)':'var(--r)'};margin-bottom:10px">
+    ${r.margin>40000?'✅ Good deal — margin above ₹40K threshold.':'⚠️ Low margin — negotiate harder or skip this vehicle.'}
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">Evaluator's Notes</span><span style="font-size:11px;color:var(--k4)">for Dilnawaz</span></div>
+    <div class="card-bd">
+      <textarea class="fc" rows="3" placeholder="Special observations, seller motivation, urgency, market comparison..." oninput="S.evalForm.evaluator_notes=this.value" style="resize:none">${f.evaluator_notes}</textarea>
+    </div>
+  </div>`;
+}
+
+// ── STEP 4: Submit ───────────────────────────────────────────
+function renderStep4(c) {
+  const f = S.evalForm;
+  const r = S.valResult || {};
+  const photoCount = f.photos.filter(Boolean).length;
+
+  c.innerHTML = `
+  <div style="background:linear-gradient(135deg,var(--k),#333);border-radius:16px;padding:20px;margin-bottom:12px;color:white">
+    <div style="font-size:11px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ready to Submit</div>
+    <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">${f.make} ${f.model} ${f.variant==='Other'?f.variantCustom:f.variant} ${f.reg_year}</div>
+    <div style="font-size:13px;opacity:.6;margin-top:3px">${f.reg_number||'No reg no.'} · ${f.fuel} · ${parseInt(f.odometer||0).toLocaleString()} km · ${f.ownership} Owner</div>
+  </div>
+
+  <div class="card">
+    <div class="card-bd">
+      <div class="vr"><span class="vr-k">Photos</span><span class="vr-v" style="color:${photoCount>=4?'var(--g)':'var(--a)'}">${photoCount}/8 uploaded</span></div>
+      <div class="vr"><span class="vr-k">Repair Estimate</span><span class="vr-v" style="color:var(--a)">${fmt(r.repairTotal||0)}</span></div>
+      <div class="vr"><span class="vr-k">Recommended Price</span><span class="vr-v" style="color:var(--g)">${fmt(r.ideal||0)}</span></div>
+      <div class="vr"><span class="vr-k">Expected Margin</span><span class="vr-v" style="color:var(--b)">${fmt(r.margin||0)}</span></div>
+      <div class="vr"><span class="vr-k">Insurance IDV</span><span class="vr-v">${f.insurance_status==='Valid'?fmt(f.insurance_idv):f.insurance_status}</span></div>
+    </div>
+  </div>
+
+  ${photoCount < 4 ? `<div style="background:var(--a2);border-radius:12px;padding:12px;font-size:13px;color:var(--a);font-weight:600;margin-bottom:10px">⚠️ Upload at least 4 photos before submitting (Front, Rear, Left, Right required)</div>` : ''}
+
+  <div style="background:var(--k6);border-radius:12px;padding:12px;font-size:12px;color:var(--k3);margin-bottom:10px">
+    📋 This evaluation will be sent to <b>Dilnawaz Khan</b> for price approval. Seller information will be collected after approval to close the deal.
+  </div>`;
+}
+
+async function evalNext() {
+  if (S.evalStep === 0) { if (!saveStep0()) return; }
+  if (S.evalStep === EVAL_STEPS.length - 1) { await submitEval(); return; }
+  S.evalStep++;
+  renderStepTrack();
+  renderEvalStep();
+  $('eval-content').scrollTop = 0;
+}
+
+function evalPrev() {
+  if (S.evalStep === 0) return;
+  S.evalStep--;
+  renderStepTrack();
+  renderEvalStep();
+  $('eval-content').scrollTop = 0;
+}
+
+async function submitEval() {
+  const btn = $('eval-next');
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+
+  const f = S.evalForm;
+  const r = S.valResult || {};
+  const photos = f.photos.map((p,i) => p ? `slot${i}` : null); // Just mark presence
+
+  const body = {
+    make:f.make, model:f.model,
+    variant: f.variant==='Other' ? f.variantCustom : f.variant,
+    reg_year:parseInt(f.reg_year)||new Date().getFullYear()-4,
+    reg_number:f.reg_number, color:f.color, fuel:f.fuel,
+    transmission:f.transmission, ownership:f.ownership,
+    odometer:parseInt(f.odometer)||0,
+    insurance_status:f.insurance_status,
+    insurance_idv:parseInt(f.insurance_idv)||0,
+    insurance_expiry:f.insurance_expiry,
+    service_history:f.service_history,
+    cond_exterior:f.cond_exterior, cond_interior:f.cond_interior,
+    cond_engine:f.cond_engine, cond_tyres:f.cond_tyres,
+    cond_electricals:f.cond_electricals,
+    rem_exterior:f.rem_exterior, rem_interior:f.rem_interior,
+    rem_engine:f.rem_engine, rem_tyres:f.rem_tyres,
+    rem_electricals:f.rem_electricals,
+    evaluator_notes:f.evaluator_notes,
+    photos:JSON.stringify(photos),
+    branch:S.user.branch,
+  };
+
+  const res = await api('/api/evaluations','POST',body);
+  if (res.ok) {
+    toast(`✅ Submitted! ${res.eval_code}`);
+    switchTab('home');
+  } else {
+    toast('❌ Error submitting. Try again.');
+    btn.innerHTML = '✓ Submit for Approval';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// APPROVALS
+// ══════════════════════════════════════════════════════════════
+async function loadApprovals() {
+  const evals = await api('/api/evaluations');
+  const pending = evals.filter(e => e.status === 'pending_approval');
+  const done = evals.filter(e => ['approved','countered','rejected'].includes(e.status)).slice(0,10);
+  S.pendingApprovals = pending;
+
+  $('approval-count-pill').textContent = `${pending.length} Pending`;
+
+  $('approval-content').innerHTML = `
+    ${pending.length === 0 && done.length === 0 ? `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No pending approvals</div></div>` : ''}
+    ${pending.length > 0 ? `<div class="sec-div">⏳ Awaiting Approval (${pending.length})</div>` : ''}
+    ${pending.map(e => renderApprovalCard(e, true)).join('')}
+    ${done.length > 0 ? `<div class="sec-div">History</div>` : ''}
+    ${done.map(e => renderApprovalCard(e, false)).join('')}
+    <div style="height:80px"></div>
+  `;
+}
+
+function renderApprovalCard(e, isPending) {
+  const statusCol = e.status==='approved'?'var(--g)':e.status==='rejected'?'var(--r)':'var(--a)';
+  const statusLabel = e.status==='approved'?'Approved':e.status==='rejected'?'Rejected':e.status==='countered'?'Countered':'Pending';
+  return `
+  <div style="padding:14px;background:white;margin:6px 10px;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid ${statusCol};cursor:pointer" onclick="openEvalDetail(${e.id})">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:800">${e.make} ${e.model} ${e.reg_year}</div>
+        <div style="font-size:11.5px;color:var(--k4);margin-top:2px">${e.evaluator_name} · ${e.branch} · ${e.odometer?.toLocaleString()||'?'} km</div>
+      </div>
+      <span class="pill" style="background:${statusCol}22;color:${statusCol}">${statusLabel}</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:${isPending?'10px':'0'}">
+      <span class="pill p-k">${e.fuel||''}</span>
+      <span class="pill p-k">${e.ownership||''} Owner</span>
+      ${e.insurance_idv?`<span class="pill p-b">IDV ${fmt(e.insurance_idv)}</span>`:''}
+      <span class="pill p-g">Ideal ${fmt(e.ideal_price)}</span>
+    </div>
+    ${isPending?`
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button class="btn btn-g btn-sm" style="flex:1" onclick="event.stopPropagation();quickApprove(${e.id},${e.ideal_price})">✓ Quick Approve</button>
+      <button class="btn btn-o btn-sm" style="flex:0 0 auto" onclick="event.stopPropagation();openEvalDetail(${e.id})">Full Review</button>
+    </div>`:''}
+  </div>`;
+}
+
+async function quickApprove(id, price) {
+  const res = await api(`/api/evaluations/${id}`,'PUT',{action:'approve',approved_price:price,approver_remarks:'Approved'});
+  if (res.ok) { toast('✅ Deal Approved!'); loadApprovals(); loadDashboard(); }
+}
+
+function openApprovalSheet() {
+  const e = S.currentEvalData;
+  if (!e) return;
+  const sheetBd = document.querySelector('#approval-sheet-content .sheet-bd');
+  sheetBd.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--k4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Final Price Decision</div>
+      <input class="big-price" id="approval-price-input" type="number" inputmode="numeric" value="${e.ideal_price}">
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--k4);margin-top:4px">
+        <span>Min ${fmt(e.min_price)}</span>
+        <span style="color:var(--g);font-weight:700">Ideal ${fmt(e.ideal_price)}</span>
+        <span>Max ${fmt(e.max_price)}</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Remarks / Conditions</label>
+      <textarea class="fc" id="approval-remarks" rows="2" placeholder="Price rationale, conditions..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <button class="btn btn-g btn-full" onclick="doApprove('approve')">✓ Approve</button>
+      <button class="btn btn-o btn-full" onclick="doApprove('counter')">↔ Counter</button>
+    </div>
+    <button class="btn btn-full" style="margin-top:8px;background:var(--r3);color:var(--r)" onclick="doApprove('reject')">✕ Reject</button>
+  `;
+  showSheet('approval-sheet');
+}
+
+async function doApprove(action) {
+  const price = parseInt($('approval-price-input')?.value) || S.currentEvalData?.ideal_price;
+  const remarks = $('approval-remarks')?.value || '';
+  const res = await api(`/api/evaluations/${S.currentEvalData.id}`,'PUT',{action,approved_price:price,approver_remarks:remarks});
+  closeSheet('approval-sheet');
+  if (res.ok) {
+    const labels = {approve:'✅ Deal Approved! Vehicle added to inventory.', counter:'↔ Counter sent back.', reject:'❌ Evaluation rejected.'};
+    toast(labels[action]);
+    if (action === 'approve') {
+      // Open seller info sheet
+      setTimeout(() => openSellerSheet(S.currentEvalData.id, price), 500);
+    }
+    loadApprovals();
+    goBack();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// EVAL DETAIL
+// ══════════════════════════════════════════════════════════════
+async function openEvalDetail(id) {
+  S.prevScreen = document.querySelector('.screen.active')?.id;
+  showScreen('eval-detail-screen');
+  $('eval-detail-content').innerHTML = `<div class="empty"><div class="spinner" style="border-color:rgba(0,0,0,.1);border-top-color:var(--r)"></div></div>`;
+  $('eval-approve-btn').style.display = 'none';
+
+  const e = await api(`/api/evaluations/${id}`);
+  S.currentEvalData = e;
+
+  const canApprove = ['admin','trust_ic'].includes(S.user.role) && e.status === 'pending_approval';
+  if (canApprove) $('eval-approve-btn').style.display = '';
+
+  const condColors = {1:'var(--r)',2:'var(--r)',3:'var(--a)',4:'var(--g)',5:'var(--g)'};
+
+  $('eval-detail-content').innerHTML = `
+  <div style="background:linear-gradient(135deg,var(--k),#333);border-radius:0;padding:16px 14px 18px;color:white;margin:0">
+    <div style="font-size:11px;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${e.eval_code} · ${e.branch}</div>
+    <div style="font-size:20px;font-weight:800">${e.make} ${e.model} ${e.variant||''} ${e.reg_year}</div>
+    <div style="font-size:12.5px;opacity:.6;margin-top:3px">${e.reg_number||''} · ${e.fuel} · ${e.transmission} · ${e.ownership} Owner · ${(e.odometer||0).toLocaleString()} km</div>
+    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <span class="pill" style="background:rgba(255,255,255,.15);color:white">${e.evaluator_name}</span>
+      <span class="pill" style="background:${e.status==='approved'?'var(--g)':e.status==='rejected'?'var(--r)':'var(--a)'};color:white">${e.status.replace('_',' ').toUpperCase()}</span>
+    </div>
+  </div>
+
+  ${e.insurance_idv ? `
+  <div class="card" style="border-radius:0;border-top:none;border-left:none;border-right:none">
+    <div class="card-bd" style="padding:10px 14px;display:flex;gap:8px;align-items:center">
+      <span style="font-size:18px">🛡️</span>
+      <div>
+        <div style="font-size:12px;font-weight:700">Insurance: ${e.insurance_status}</div>
+        <div style="font-size:11.5px;color:var(--k3)">IDV: ${fmt(e.insurance_idv)} · Expiry: ${e.insurance_expiry||'—'}</div>
+      </div>
+    </div>
+  </div>` : ''}
+
+  <div style="padding:10px 14px">
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">Condition</span></div>
+    <div class="card-bd" style="padding:8px 14px">
+      ${COND_ITEMS.map(ci => {
+        const rating = e[`cond_${ci.key}`] || 3;
+        const rem = e[`rem_${ci.key}`];
+        return `<div class="cond-row">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12.5px;font-weight:600">${ci.icon} ${ci.label}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px">${'●'.repeat(rating)}${'○'.repeat(5-rating)}</span>
+              <span style="font-size:11px;font-weight:800;color:${condColors[rating]}">${COND_LABELS[rating]}</span>
+            </div>
+          </div>
+          ${rem?`<div style="font-size:11.5px;color:var(--k3);margin-top:4px">${rem}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">Valuation</span></div>
+    <div class="card-bd">
+      <div class="vr"><span class="vr-k">Market Base</span><span class="vr-v">${fmt(e.market_base)}</span></div>
+      <div class="vr"><span class="vr-k">Km Adjustment</span><span class="vr-v" style="color:${e.km_adj>=0?'var(--g)':'var(--r)'}">${e.km_adj>=0?'+':''}${fmt(e.km_adj)}</span></div>
+      <div class="vr"><span class="vr-k">IDV Adjustment</span><span class="vr-v" style="color:${e.idv_adj>=0?'var(--g)':'var(--r)'}">${e.idv_adj>=0?'+':''}${fmt(e.idv_adj)}</span></div>
+      <div class="vr"><span class="vr-k">Repair Deduction</span><span class="vr-v" style="color:var(--r)">−${fmt(e.repair_total)}</span></div>
+      <div class="vr" style="border-top:2px solid var(--k5);padding-top:10px;margin-top:4px">
+        <span style="font-size:14px;font-weight:800">Ideal Price</span>
+        <span style="font-size:22px;font-weight:800;color:var(--g)">${fmt(e.ideal_price)}</span>
+      </div>
+      <div class="vr"><span class="vr-k">Resale Estimate</span><span class="vr-v">${fmt(e.resale_est)}</span></div>
+      <div class="vr"><span class="vr-k">Expected Margin</span><span class="vr-v" style="color:var(--g)">${fmt(e.expected_margin)}</span></div>
+      ${e.approved_price?`<div class="vr" style="background:var(--g3);border-radius:8px;padding:10px;margin-top:6px"><span style="font-size:13px;font-weight:800;color:var(--g)">APPROVED PRICE</span><span style="font-size:22px;font-weight:800;color:var(--g)">${fmt(e.approved_price)}</span></div>`:''}
+    </div>
+  </div>
+
+  ${e.evaluator_notes?`
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">Evaluator Notes</span></div>
+    <div class="card-bd" style="font-size:13px;color:var(--k2);line-height:1.5">${e.evaluator_notes}</div>
+  </div>`:''}
+
+  ${e.approver_remarks?`
+  <div class="card" style="border-color:var(--g)">
+    <div class="card-hd"><span class="card-hd-title" style="color:var(--g)">Dilnawaz's Remarks</span></div>
+    <div class="card-bd" style="font-size:13px;color:var(--k2)">${e.approver_remarks}</div>
+  </div>`:''}
+
+  ${e.status==='approved'?`
+  <button class="btn btn-g btn-full" onclick="openSellerSheet(${e.id},${e.approved_price})">📋 Complete Purchase (Seller Info)</button>
+  <div style="height:8px"></div>`:
+  canApprove?`<button class="btn btn-r btn-full" onclick="openApprovalSheet()">✓ Give Price Decision</button><div style="height:8px"></div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELLER INFO SHEET (post-approval only)
+// ══════════════════════════════════════════════════════════════
+function openSellerSheet(evalId, price) {
+  const e = S.currentEvalData || {};
+  $('seller-sheet-car').textContent = `${e.make||''} ${e.model||''} ${e.variant||''} ${e.reg_year||''}`;
+  $('seller-sheet-price').textContent = `Approved Price: ${fmt(price)}`;
+
+  const DOCS = [
+    {key:'rc', label:'RC (Registration Certificate)', req:true},
+    {key:'keys', label:'Both Keys (Main + Spare)', req:true},
+    {key:'insurance', label:'Insurance Copy', req:true},
+    {key:'noc', label:'Bank NOC (if financed)', req:true},
+    {key:'form29', label:'Form 29 (Signed)', req:true},
+    {key:'form30', label:'Form 30 (Signed)', req:true},
+    {key:'aadhaar', label:'Seller Aadhaar', req:false},
+    {key:'service', label:'Service Records', req:false},
+  ];
+
+  $('seller-sheet-bd').innerHTML = `
+  <div class="form-section">
+    <div class="form-section-label">👤 Seller Identity (Mandatory)</div>
+    <div class="fg">
+      <label>Full Name *</label>
+      <input class="fc" id="sl-name" placeholder="As per Aadhaar">
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label>Mobile *</label>
+        <input class="fc" id="sl-phone" type="tel" inputmode="numeric" placeholder="10-digit">
+      </div>
+      <div class="fg">
+        <label>Aadhaar *</label>
+        <input class="fc" id="sl-aadhaar" inputmode="numeric" placeholder="XXXX-XXXX-XXXX" maxlength="14">
+      </div>
+    </div>
+    <div class="fg">
+      <label>PAN (optional)</label>
+      <input class="fc" id="sl-pan" placeholder="ABCDE1234F" style="text-transform:uppercase">
+    </div>
+    <div class="fg">
+      <label>Address *</label>
+      <textarea class="fc" id="sl-address" rows="2" placeholder="Full address with PIN code"></textarea>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-label">🏦 Bank Details (for Payment)</div>
+    <div class="fg">
+      <label>Account Number</label>
+      <input class="fc" id="sl-acc" type="number" inputmode="numeric">
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label>Bank Name</label>
+        <select class="fc" id="sl-bank">
+          ${['SBI','Bank of Bihar','Punjab National Bank','HDFC Bank','ICICI Bank','Axis Bank','Canara Bank','Bank of Baroda','Other'].map(b=>`<option>${b}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>IFSC Code</label>
+        <input class="fc" id="sl-ifsc" placeholder="e.g. SBIN0003134" style="text-transform:uppercase">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Payment Mode</label>
+      <select class="fc" id="sl-pay">
+        <option>Cash</option><option>NEFT/RTGS</option><option>Cheque</option><option>UPI</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-label">📄 Document Checklist</div>
+    ${DOCS.map(d => `
+    <div class="chk-row">
+      <div class="chk-box" id="doc-${d.key}" onclick="toggleDoc('${d.key}')"></div>
+      <span class="chk-text ${d.req?'chk-req':''}">${d.label}${d.req?' *':''}</span>
+      <select class="chk-sel" id="docsel-${d.key}">
+        <option>Received</option><option>Pending</option><option>N/A</option>
+      </select>
+    </div>`).join('')}
+  </div>
+
+  <div style="margin-top:6px;margin-bottom:20px">
+    <button class="btn btn-g btn-full" style="font-size:15px;padding:14px" onclick="submitSeller(${evalId},${price})">
+      🤝 Close Deal & Add to Inventory
+    </button>
+    <div style="font-size:11px;color:var(--k4);text-align:center;margin-top:8px">Customer & Internal PDFs will be generated after closing.</div>
+  </div>`;
+
+  showSheet('seller-sheet');
+}
+
+function toggleDoc(key) {
+  const box = $(`doc-${key}`);
+  const checked = box.classList.toggle('checked');
+  box.innerHTML = checked ? '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+}
+
+async function submitSeller(evalId, price) {
+  const name = $('sl-name')?.value.trim();
+  const phone = $('sl-phone')?.value.trim();
+  const aadhaar = $('sl-aadhaar')?.value.trim();
+  const address = $('sl-address')?.value.trim();
+  if (!name || !phone || !address) { toast('⚠ Name, mobile and address are required'); return; }
+
+  const docs = {};
+  ['rc','keys','insurance','noc','form29','form30','aadhaar','service'].forEach(k => {
+    docs[k] = $(`docsel-${k}`)?.value || 'Pending';
+  });
+
+  const res = await api('/api/procurement','POST',{
+    eval_id: evalId, final_price: price,
+    seller_name:name, seller_phone:phone,
+    seller_aadhaar:aadhaar, seller_pan:$('sl-pan')?.value||'',
+    seller_address:address,
+    bank_account:$('sl-acc')?.value||'',
+    bank_name:$('sl-bank')?.value||'',
+    bank_ifsc:$('sl-ifsc')?.value||'',
+    payment_mode:$('sl-pay')?.value||'Cash',
+    docs_checklist:docs,
+  });
+
+  if (res.ok) {
+    closeSheet('seller-sheet');
+    toast('🎉 Deal closed! Vehicle added to inventory.');
+    setTimeout(() => switchTab('inventory'), 800);
+  } else {
+    toast('❌ Error. Try again.');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INVENTORY
+// ══════════════════════════════════════════════════════════════
+async function loadInventory() {
+  const data = await api('/api/inventory');
+  S.inventoryData = data;
+  $('inv-count-badge').textContent = data.length;
+  renderInventory(data);
+}
+
+function renderInventory(items) {
+  if (items.length === 0) {
+    $('inventory-content').innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No vehicles in inventory</div></div>`;
+    return;
+  }
+  const available = items.filter(i => i.status === 'available');
+  const sold = items.filter(i => i.status === 'sold');
+
+  $('inventory-content').innerHTML = `
+    ${available.length>0?`<div class="sec-div">Available (${available.length})</div>`:''}
+    ${available.map(inv => `
+    <div class="inv-row">
+      <div class="inv-icon">🚗</div>
+      <div class="inv-info">
+        <div class="inv-name">${inv.make} ${inv.model} ${inv.variant||''}</div>
+        <div class="inv-meta">${inv.reg_year} · ${inv.reg_number||'—'} · ${inv.fuel} · ${(inv.odometer||0).toLocaleString()} km · ${inv.ownership} Owner</div>
+        <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="pill p-k" style="font-size:9.5px">${inv.color||''}</span>
+          <span class="pill p-g" style="font-size:9.5px">${inv.status}</span>
+          ${inv.days_in_stock>25?`<span class="pill p-r" style="font-size:9.5px">${inv.days_in_stock}d in stock</span>`:''}
+        </div>
+      </div>
+      <div class="inv-price">
+        <div class="inv-buy">${fmt(inv.buy_price)}</div>
+        <div class="inv-margin">+${fmt(inv.resale_est - inv.buy_price - inv.repair_total)}</div>
+      </div>
+    </div>`).join('')}
+    ${sold.length>0?`<div class="sec-div">Sold (${sold.length})</div>`:''}
+    ${sold.map(inv => `
+    <div class="inv-row" style="opacity:.55">
+      <div class="inv-icon">✅</div>
+      <div class="inv-info">
+        <div class="inv-name">${inv.make} ${inv.model} ${inv.reg_year}</div>
+        <div class="inv-meta">${inv.reg_number||'—'} · Sold for ${fmt(inv.sold_price||0)}</div>
+      </div>
+      <div class="inv-price">
+        <div class="inv-buy" style="color:var(--g)">${fmt(inv.sold_margin||0)}</div>
+        <div class="inv-margin">margin</div>
+      </div>
+    </div>`).join('')}
+    <div style="height:80px"></div>`;
+}
+
+function filterInventory() {
+  const q = $('inv-search').value.toLowerCase();
+  const filtered = S.inventoryData.filter(i =>
+    `${i.make} ${i.model} ${i.variant} ${i.reg_number} ${i.fuel}`.toLowerCase().includes(q)
+  );
+  renderInventory(filtered);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', checkAuth);
+$('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>
