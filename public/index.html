@@ -185,9 +185,100 @@ select,input,textarea{font-family:var(--ff);outline:none}
 .step.done{color:var(--grn);border-bottom-color:var(--grn)}
 /* Insurance impact banner */
 .ins-impact{background:var(--blu-l);border:1px solid rgba(26,95,191,.15);border-radius:7px;padding:9px 12px;margin-top:8px}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(145deg,#1a0a0a 0%,#7F1D1D 40%,#B91C1C 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--ff);
+}
+.login-card{
+  background:rgba(255,255,255,.07);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;padding:36px 28px;
+  width:100%;max-width:380px;
+}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .licon{width:64px;height:64px;background:rgba(255,255,255,.15);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px}
+.login-logo h1{font-size:24px;font-weight:800;color:white;letter-spacing:-.5px}
+.login-logo p{font-size:12px;color:rgba(255,255,255,.45);margin-top:3px}
+.login-field{margin-bottom:13px}
+.login-field label{font-size:10.5px;font-weight:700;color:rgba(255,255,255,.45);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.login-field input{width:100%;padding:12px 14px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:white;font-size:15px;font-family:var(--ff);outline:none;transition:border .15s}
+.login-field input:focus{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.15)}
+.login-field input::placeholder{color:rgba(255,255,255,.25)}
+.login-btn{width:100%;padding:13px;background:#DC2626;border:none;border-radius:10px;color:white;font-size:15px;font-weight:800;font-family:var(--ff);cursor:pointer;margin-top:4px;transition:all .15s;letter-spacing:-.2px}
+.login-btn:hover{background:#EF4444}
+.login-btn:active{transform:scale(.98)}
+.login-err{color:#FCA5A5;font-size:12px;text-align:center;margin-top:9px;min-height:18px}
+.login-hint{margin-top:14px;background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px}
+.login-hint-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.login-hint-row{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.45);padding:2px 0}
+.login-hint-row b{color:rgba(255,255,255,.65);font-family:var(--mono)}
+/* ── LOGOUT BUTTON ── */
+.logout-btn{background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:all .14s}
+.logout-btn:hover{background:rgba(255,255,255,.2);color:white}
+/* ── CAMERA MODAL ── */
+#camera-modal{position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.95);display:none;flex-direction:column;align-items:center;justify-content:center}
+#camera-modal.open{display:flex}
+#camera-video{width:100%;max-width:480px;border-radius:12px;background:#000}
+.cam-controls{display:flex;gap:12px;margin-top:16px;align-items:center}
+.cam-snap{width:64px;height:64px;border-radius:50%;background:#DC2626;border:4px solid white;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cam-snap:active{transform:scale(.93)}
+.cam-cancel{background:rgba(255,255,255,.15);border:none;color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ff)}
+.cam-switch{background:rgba(255,255,255,.15);border:none;color:white;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#cam-slot-label{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;margin-bottom:8px}
+#cam-canvas{display:none}
+/* hide admin nav from non-admin */
+.nav-admin-only{display:none}
 </style>
 </head>
 <body>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="licon">🚗</div>
+      <h1>AutoCRM</h1>
+      <p>Prakash Auto Hub · Used Cars</p>
+    </div>
+    <div class="login-field">
+      <label>Mobile Number</label>
+      <input type="tel" id="li-phone" placeholder="10-digit mobile" maxlength="10" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="li-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-err" id="li-err"></div>
+    <div class="login-hint">
+      <div class="login-hint-title">Demo Credentials</div>
+      <div class="login-hint-row"><span>Admin</span><b>9000000000 / Admin@2026</b></div>
+      <div class="login-hint-row"><span>Trust Incharge</span><b>9100000001 / Dilnawaz@2026</b></div>
+      <div class="login-hint-row"><span>Sales Officer</span><b>9100000002 / AutoCRM@2026</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CAMERA MODAL ═══ -->
+<div id="camera-modal">
+  <div id="cam-slot-label">📷 Capturing: Front View</div>
+  <video id="camera-video" autoplay playsinline muted></video>
+  <canvas id="cam-canvas"></canvas>
+  <div class="cam-controls">
+    <button class="cam-cancel" onclick="closeCamera()">✕ Cancel</button>
+    <div class="cam-snap" onclick="snapPhoto()">📸</div>
+    <button class="cam-switch" onclick="switchCamera()" title="Switch camera">🔄</button>
+  </div>
+</div>
+
+<!-- hidden file input fallback -->
+<input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="filePhotoSelected(event)">
+
 <div class="app">
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="sidebar">
@@ -235,8 +326,9 @@ select,input,textarea{font-family:var(--ff);outline:none}
     </div>
   </nav>
   <div class="sidebar-user">
-    <div class="av">DK</div>
-    <div class="user-info"><div class="name">Dilnawaz Khan</div><div class="role">Trust Incharge · Forbesganj</div></div>
+    <div class="av" id="sidebar-av">?</div>
+    <div class="user-info" style="flex:1"><div class="name" id="sidebar-name">—</div><div class="role" id="sidebar-role">—</div></div>
+    <button class="logout-btn" onclick="doLogout()" title="Logout">⏻</button>
   </div>
 </aside>
 
@@ -248,6 +340,7 @@ select,input,textarea{font-family:var(--ff);outline:none}
     <div class="topbar-actions">
       <button class="btn btn-out" onclick="showView('inventory')">📦 Inventory</button>
       <button class="btn btn-red" onclick="showView('evaluate')">+ New Evaluation</button>
+      <button class="btn btn-out" onclick="doLogout()" style="border-color:var(--red-l);color:var(--red)">⏻ Logout</button>
     </div>
   </div>
 
@@ -398,23 +491,20 @@ select,input,textarea{font-family:var(--ff);outline:none}
             </div>
           </div>
         </div>
-        <!-- Photo capture -->
+        <!-- Photo capture — LIVE CAMERA -->
         <div class="card">
-          <div class="card-hd"><span class="card-title">Photo Capture</span><span style="font-size:11px;color:var(--d4)">6/8 uploaded</span></div>
+          <div class="card-hd">
+            <span class="card-title">Photo Capture</span>
+            <span style="font-size:11px;color:var(--d4)" id="photo-count-badge">0/9 captured</span>
+          </div>
           <div class="card-bd">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Front</div></div>
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Rear</div></div>
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Left Side</div></div>
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Right Side</div></div>
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Odometer</div></div>
-              <div style="aspect-ratio:1;background:var(--grn-l);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--grn);gap:2px"><div>✓</div><div>Chassis</div></div>
-              <div style="aspect-ratio:1;background:var(--amb-l);border:1.5px dashed var(--amb);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--amb);gap:2px;cursor:pointer"><div>+</div><div>Interior</div></div>
-              <div style="aspect-ratio:1;background:var(--g1);border:1.5px dashed var(--g3);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:var(--d4);gap:2px;cursor:pointer"><div>+</div><div>Engine Bay</div></div>
-              <div style="aspect-ratio:1;background:var(--g1);border:1.5px dashed var(--g3);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:var(--d4);gap:2px;cursor:pointer"><div>+</div><div>Dashboard</div></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px" id="photo-grid-container"></div>
+            <div style="font-size:10px;color:var(--d4);margin-bottom:6px" id="photo-gps-tag">📍 GPS: tap a slot to capture</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-out btn-sm" onclick="openFileInput(-1)">📂 Upload from Gallery</button>
+              <button class="btn btn-red btn-sm" onclick="openCameraForSlot(nextEmptySlot())">📷 Open Camera</button>
             </div>
-            <div style="font-size:10px;color:var(--d4);margin-bottom:10px">📍 GPS: Forbesganj (26.30°N, 87.27°E) · 11:34 AM · Stamped on all photos</div>
-            <div class="alert alert-a">⚠ Interior and engine bay photos required before submission.</div>
+            <div class="alert alert-a" style="margin-top:8px" id="photo-alert">⚠ Front, Rear, Left Side, Right Side photos are required.</div>
           </div>
         </div>
       </div>
@@ -1162,12 +1252,12 @@ select,input,textarea{font-family:var(--ff);outline:none}
 // ═══════════════════════════════════════════════════════════════════
 const DB = {
   employees: JSON.parse(localStorage.getItem('acrm_employees') || 'null') || [
-    {id:1, name:'Admin',         mobile:'9000000000', role:'admin',      branch:'All',        email:'admin@prakashauto.in',   target:0,  joindate:'2024-01-01', notes:'Master admin account', active:true,  inspToday:0,  buysToday:0,  sellsToday:0, monthPct:100},
-    {id:2, name:'Dilnawaz Khan', mobile:'9100000001', role:'trust_ic',   branch:'Forbesganj', email:'dilnawaz@prakashauto.in',target:0,  joindate:'2024-01-15', notes:'Trust Incharge — final approvals', active:true, inspToday:2, buysToday:2, sellsToday:1, monthPct:100},
-    {id:3, name:'Arjun Mehta',   mobile:'9100000002', role:'sales_exec', branch:'Forbesganj', email:'arjun@prakashauto.in',   target:20, joindate:'2024-02-01', notes:'Top performer', active:true,  inspToday:9, buysToday:3, sellsToday:2, monthPct:120},
-    {id:4, name:'Priya Sharma',  mobile:'9100000003', role:'sales_exec', branch:'Bhagalpur',  email:'priya@prakashauto.in',   target:18, joindate:'2024-03-10', notes:'', active:true, inspToday:7, buysToday:1, sellsToday:1, monthPct:95},
-    {id:5, name:'Ravi Kumar',    mobile:'9100000004', role:'sales_exec', branch:'Forbesganj', email:'ravi@prakashauto.in',    target:18, joindate:'2024-02-20', notes:'', active:true, inspToday:5, buysToday:2, sellsToday:1, monthPct:80},
-    {id:6, name:'Sunita Yadav',  mobile:'9100000005', role:'sales_exec', branch:'Purnea',     email:'sunita@prakashauto.in',  target:15, joindate:'2024-04-05', notes:'Needs coaching', active:true, inspToday:3, buysToday:0, sellsToday:1, monthPct:55},
+    {id:1, name:'Admin',         mobile:'9000000000', role:'admin',      branch:'All',        email:'admin@prakashauto.in',   target:0,  joindate:'2024-01-01', notes:'Master admin account', active:true,  inspToday:0,  buysToday:0,  sellsToday:0, monthPct:100, password:'Admin@2026'},
+    {id:2, name:'Dilnawaz Khan', mobile:'9100000001', role:'trust_ic',   branch:'Forbesganj', email:'dilnawaz@prakashauto.in',target:0,  joindate:'2024-01-15', notes:'Trust Incharge — final approvals', active:true, inspToday:2, buysToday:2, sellsToday:1, monthPct:100, password:'Dilnawaz@2026'},
+    {id:3, name:'Arjun Mehta',   mobile:'9100000002', role:'sales_exec', branch:'Forbesganj', email:'arjun@prakashauto.in',   target:20, joindate:'2024-02-01', notes:'Top performer', active:true,  inspToday:9, buysToday:3, sellsToday:2, monthPct:120, password:'AutoCRM@2026'},
+    {id:4, name:'Priya Sharma',  mobile:'9100000003', role:'sales_exec', branch:'Bhagalpur',  email:'priya@prakashauto.in',   target:18, joindate:'2024-03-10', notes:'', active:true, inspToday:7, buysToday:1, sellsToday:1, monthPct:95, password:'AutoCRM@2026'},
+    {id:5, name:'Ravi Kumar',    mobile:'9100000004', role:'sales_exec', branch:'Forbesganj', email:'ravi@prakashauto.in',    target:18, joindate:'2024-02-20', notes:'', active:true, inspToday:5, buysToday:2, sellsToday:1, monthPct:80, password:'AutoCRM@2026'},
+    {id:6, name:'Sunita Yadav',  mobile:'9100000005', role:'sales_exec', branch:'Purnea',     email:'sunita@prakashauto.in',  target:15, joindate:'2024-04-05', notes:'Needs coaching', active:true, inspToday:3, buysToday:0, sellsToday:1, monthPct:55, password:'AutoCRM@2026'},
   ],
   inventory: JSON.parse(localStorage.getItem('acrm_inventory') || 'null') || [
     {id:1,code:'INV-001',make:'Maruti Suzuki',model:'Swift',variant:'VXI',year:2021,color:'Pearl White',reg:'BR-01-MN-2021',fuel:'Petrol',trans:'Manual',owner:'1st',odo:38500,buy:440000,resale:540000,repair:29000,status:'available',days:3,branch:'Forbesganj',notes:''},
@@ -2021,9 +2111,289 @@ function renderAuditLog() {
 }
 
 // Init inventory on page load
+// DOMContentLoaded handled in auth section above
+
+// ═══════════════════════════════════════════════════════════════════
+// AUTH — Login / Logout / Session
+// ═══════════════════════════════════════════════════════════════════
+let CURRENT_USER = null;
+
+const ROLE_HIERARCHY = {admin:3, trust_ic:2, sales_exec:1, team_leader:1};
+const ROLE_DISPLAY = {admin:'Admin', trust_ic:'Trust Incharge', sales_exec:'Sales Officer', team_leader:'Team Leader'};
+
+function doLogin() {
+  const phone = document.getElementById('li-phone').value.trim();
+  const pass  = document.getElementById('li-pass').value;
+  const errEl = document.getElementById('li-err');
+  errEl.textContent = '';
+
+  if (!phone || !pass) { errEl.textContent = 'Enter your mobile number and password.'; return; }
+
+  const user = DB.employees.find(e => e.mobile === phone && e.active);
+  if (!user) { errEl.textContent = '❌ Mobile number not found or account inactive.'; return; }
+
+  // Check password — stored in DB
+  const pwd = user.password || 'AutoCRM@2026';
+  if (pass !== pwd) { errEl.textContent = '❌ Incorrect password.'; return; }
+
+  CURRENT_USER = user;
+  // Persist session
+  sessionStorage.setItem('acrm_session', JSON.stringify({id: user.id, ts: Date.now()}));
+
+  document.getElementById('login-screen').style.display = 'none';
+  applyRoleUI();
+  showView('dashboard');
+}
+
+function doLogout() {
+  if (!confirm('Logout from AutoCRM?')) return;
+  CURRENT_USER = null;
+  sessionStorage.removeItem('acrm_session');
+  // Clear sensitive fields
+  document.getElementById('li-pass').value = '';
+  document.getElementById('li-err').textContent = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  // Reset view
+  showView('dashboard');
+}
+
+function checkSession() {
+  const sess = sessionStorage.getItem('acrm_session');
+  if (!sess) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  try {
+    const s = JSON.parse(sess);
+    // Session expires after 8 hours
+    if (Date.now() - s.ts > 8 * 60 * 60 * 1000) {
+      sessionStorage.removeItem('acrm_session');
+      document.getElementById('login-screen').style.display = 'flex';
+      return;
+    }
+    const user = DB.employees.find(e => e.id === s.id && e.active);
+    if (!user) { document.getElementById('login-screen').style.display = 'flex'; return; }
+    CURRENT_USER = user;
+    document.getElementById('login-screen').style.display = 'none';
+    applyRoleUI();
+    showView('dashboard');
+  } catch {
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+function applyRoleUI() {
+  if (!CURRENT_USER) return;
+  const u = CURRENT_USER;
+
+  // Sidebar user info
+  const initials = u.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('sidebar-av').textContent = initials;
+  document.getElementById('sidebar-av').style.background = u.role==='admin'?'var(--pur)':u.role==='trust_ic'?'var(--red)':'var(--blu)';
+  document.getElementById('sidebar-name').textContent = u.name;
+  document.getElementById('sidebar-role').textContent = ROLE_DISPLAY[u.role] + ' · ' + u.branch;
+
+  // Show/hide Admin nav item
+  const adminNav = document.querySelector('.nav-item[data-view="admin"]');
+  if (adminNav) adminNav.style.display = u.role === 'admin' ? '' : 'none';
+
+  // Show/hide Approval nav (trust_ic + admin only)
+  const approvalNav = document.querySelector('.nav-item[data-view="approval"]');
+  if (approvalNav) approvalNav.style.display = ['admin','trust_ic'].includes(u.role) ? '' : 'none';
+
+  // GPS tag in photos
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude.toFixed(4);
+      const lng = pos.coords.longitude.toFixed(4);
+      const gpsEl = document.getElementById('photo-gps-tag');
+      if (gpsEl) gpsEl.textContent = `📍 GPS: ${u.branch} (${lat}°N, ${lng}°E) · ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`;
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHOTO CAPTURE — Real Camera + Gallery fallback
+// ═══════════════════════════════════════════════════════════════════
+const PHOTO_SLOTS_DEF = [
+  {label:'Front View',   icon:'🚗', required:true},
+  {label:'Rear View',    icon:'🔙', required:true},
+  {label:'Left Side',    icon:'◀️',  required:true},
+  {label:'Right Side',   icon:'▶️',  required:true},
+  {label:'Dashboard',    icon:'🎛️', required:false},
+  {label:'Odometer',     icon:'🔢', required:false},
+  {label:'Engine Bay',   icon:'⚙️', required:false},
+  {label:'Interior',     icon:'💺', required:false},
+  {label:'Chassis / RC', icon:'📋', required:false},
+];
+
+const photoData = new Array(PHOTO_SLOTS_DEF.length).fill(null); // base64 strings
+let activeCameraSlot = null;
+let cameraStream = null;
+let facingMode = 'environment'; // rear camera default
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('photo-grid-container');
+  if (!grid) return;
+  const captured = photoData.filter(Boolean).length;
+  const badge = document.getElementById('photo-count-badge');
+  if (badge) badge.textContent = `${captured}/${PHOTO_SLOTS_DEF.length} captured`;
+
+  const alertEl = document.getElementById('photo-alert');
+  const requiredDone = PHOTO_SLOTS_DEF.filter((s,i)=>s.required && photoData[i]).length;
+  const requiredTotal = PHOTO_SLOTS_DEF.filter(s=>s.required).length;
+  if (alertEl) {
+    if (requiredDone === requiredTotal) {
+      alertEl.style.background='var(--grn-l)';alertEl.style.color='var(--grn)';
+      alertEl.style.borderColor='rgba(30,120,60,.15)';
+      alertEl.textContent='✓ All required photos captured!';
+    } else {
+      alertEl.style.background='var(--amb-l)';alertEl.style.color='var(--amb)';
+      alertEl.style.borderColor='rgba(200,124,16,.15)';
+      alertEl.textContent=`⚠ ${requiredTotal-requiredDone} required photo(s) still needed: ${PHOTO_SLOTS_DEF.filter((s,i)=>s.required&&!photoData[i]).map(s=>s.label).join(', ')}`;
+    }
+  }
+
+  grid.innerHTML = PHOTO_SLOTS_DEF.map((slot, i) => {
+    const data = photoData[i];
+    if (data) {
+      return `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;cursor:pointer" onclick="openCameraForSlot(${i})">
+        <img src="${data}" style="width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.55);color:white;font-size:8px;padding:2px 5px;border-radius:4px">${slot.label}</div>
+        <div style="position:absolute;top:3px;right:3px;background:var(--grn);color:white;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px">✓</div>
+        <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.5);color:white;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer" onclick="event.stopPropagation();deletePhoto(${i})">✕</div>
+      </div>`;
+    }
+    const borderCol = slot.required ? 'var(--red)' : 'var(--g3)';
+    const bg = slot.required ? 'var(--red-l)' : 'var(--g1)';
+    return `<div style="aspect-ratio:1;border-radius:8px;background:${bg};border:1.5px dashed ${borderCol};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .14s" onclick="openCameraForSlot(${i})" onmouseover="this.style.background='var(--g2)'" onmouseout="this.style.background='${bg}'">
+      <div style="font-size:20px">${slot.icon}</div>
+      <div style="font-size:8.5px;font-weight:700;color:${slot.required?'var(--red)':'var(--d4)'};text-align:center;padding:0 4px;line-height:1.3">${slot.label}${slot.required?' *':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function deletePhoto(i) {
+  photoData[i] = null;
+  renderPhotoGrid();
+}
+
+function nextEmptySlot() {
+  const i = photoData.findIndex(p => !p);
+  return i === -1 ? 0 : i;
+}
+
+async function openCameraForSlot(slotIndex) {
+  activeCameraSlot = slotIndex;
+  const label = PHOTO_SLOTS_DEF[slotIndex]?.label || 'Photo';
+  document.getElementById('cam-slot-label').textContent = `📷 Capturing: ${label}`;
+  document.getElementById('camera-modal').classList.add('open');
+  await startCameraStream();
+}
+
+async function startCameraStream() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    });
+    document.getElementById('camera-video').srcObject = cameraStream;
+  } catch(err) {
+    // Camera denied or not available — fall back to file input
+    closeCameraModal();
+    document.getElementById('photo-file-input').dataset.slot = activeCameraSlot;
+    document.getElementById('photo-file-input').click();
+    console.warn('Camera unavailable, using file input:', err.message);
+  }
+}
+
+function switchCamera() {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  startCameraStream();
+}
+
+function snapPhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('cam-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Stamp GPS + timestamp + slot label
+  const ts = new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const branch = CURRENT_USER?.branch || 'AutoCRM';
+  const label = PHOTO_SLOTS_DEF[activeCameraSlot]?.label || '';
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, canvas.height - 28, canvas.width, 28);
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 12px Arial';
+  ctx.fillText(`📍 ${branch} · ${label} · ${ts}`, 8, canvas.height - 10);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  photoData[activeCameraSlot] = dataUrl;
+  closeCamera();
+  renderPhotoGrid();
+
+  // Auto-advance to next empty slot
+  const next = nextEmptySlot();
+  if (photoData.filter(Boolean).length < PHOTO_SLOTS_DEF.length) {
+    setTimeout(() => {
+      if (confirm(`✓ ${label} captured!\n\nCapture next: ${PHOTO_SLOTS_DEF[next]?.label}?`)) {
+        openCameraForSlot(next);
+      }
+    }, 200);
+  }
+}
+
+function closeCamera() {
+  closeCameraModal();
+  renderPhotoGrid();
+}
+
+function closeCameraModal() {
+  document.getElementById('camera-modal').classList.remove('open');
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream = null; }
+}
+
+function openFileInput(slot) {
+  const inp = document.getElementById('photo-file-input');
+  inp.dataset.slot = slot === -1 ? nextEmptySlot() : slot;
+  inp.click();
+}
+
+function filePhotoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const slot = parseInt(event.target.dataset.slot) || 0;
+  const reader = new FileReader();
+  reader.onload = e => {
+    photoData[slot] = e.target.result;
+    renderPhotoGrid();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT on page load
+// ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(renderMainInventory, 100);
+  checkSession();
+  renderPhotoGrid();
+  renderMainInventory();
+  // Ensure passwords exist on all employees
+  DB.employees.forEach(e => {
+    if (!e.password) {
+      e.password = e.role==='admin' ? 'Admin@2026' : e.role==='trust_ic' ? 'Dilnawaz@2026' : 'AutoCRM@2026';
+    }
+  });
+  saveDB();
 });
+
+// Keyboard shortcut: press Escape to close camera
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCameraModal();
+});
+
 </script>
 </body>
 </html>
